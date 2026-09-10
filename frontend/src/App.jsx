@@ -117,6 +117,9 @@ function App() {
                 }}
               >
                 <Routes>
+                  {/* Root Redirect - IMPORTANT: This is why / was showing 404 */}
+                  <Route path="/" element={<Navigate to="/login" replace />} />
+
                   {/* Auth Routes */}
                   <Route path="/login" element={<ClientLogin />} />
 
@@ -202,7 +205,7 @@ function App() {
                     <Route path="*" element={<Navigate to="/staff/dashboard" replace />} />
                   </Route>
 
-                  {/* 404 */}
+                  {/* 404 - Catch All */}
                   <Route path="*" element={<NotFound />} />
                 </Routes>
               </Router>
