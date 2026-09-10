@@ -1,0 +1,86 @@
+# ==================== Python ====================
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+ENV/
+.venv/
+*.egg-info/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# ==================== Node ====================
+node_modules/
+dist/
+build/
+.vite/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# ==================== Environment Files (CRITICAL - NEVER COMMIT THESE!) ====================
+.env
+.env.local
+.env.development
+.env.production
+.env.*.local
+!.env.example
+
+# ==================== IDE ====================
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# ==================== OS ====================
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ==================== Database ====================
+*.db
+*.sqlite
+*.sqlite3
+*.sql.gz
+
+# ==================== Logs ====================
+logs/
+*.log
+
+# ==================== Backups ====================
+backups/
+*.bak
+
+# ==================== Uploads ====================
+uploads/
+media/
+
+# ==================== Cache ====================
+.cache/
+temp/
+tmp/
+# ==================== Office Temp Files ====================
+~$*.docx
+~$*.doc
+~$*.xlsx
+~$*.ppt
+*.tmp
+
+# ==================== Wrong Extensions (Temp Files) ====================
+*.txt.bak
+*.jsx.txt
+*.js.txt
+Dockerfile.txt
+*.yml.txt
+*.conf.txt
+
+# ==================== Large Documents (Optional) ====================
+*.docx
+*.pdf
+*.zip
