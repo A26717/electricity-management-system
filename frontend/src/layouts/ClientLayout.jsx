@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Layout, Menu, Button, Avatar, Dropdown, Space, Badge, Tooltip, Switch, theme } from 'antd';
+import { Layout, Menu, Button, Avatar, Dropdown, Space, Badge, Tooltip, Switch, theme, Modal } from 'antd';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import {
   DashboardOutlined,
@@ -18,8 +18,7 @@ import {
   AlertOutlined,
   EnvironmentOutlined,
   HomeOutlined,
-  ShoppingOutlined,
-  WalletOutlined
+  ShoppingOutlined
 } from '@ant-design/icons';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
@@ -32,7 +31,7 @@ const ClientLayout = () => {
   const { user, logout } = useAuth();
   const { darkMode, toggleTheme } = useTheme();
   const [collapsed, setCollapsed] = useState(false);
-  
+
   const {
     token: { colorBgContainer, borderRadiusLG },
   } = theme.useToken();
@@ -52,6 +51,19 @@ const ClientLayout = () => {
 
   const selectedKey = location.pathname;
 
+  const handleLogout = () => {
+    Modal.confirm({
+      title: 'Confirm Logout',
+      content: 'Are you sure you want to logout?',
+      okText: 'Yes, Logout',
+      okType: 'danger',
+      cancelText: 'Cancel',
+      onOk: () => {
+        logout();
+      }
+    });
+  };
+
   const userMenu = (
     <Menu>
       <Menu.Item key="profile" icon={<UserOutlined />} onClick={() => navigate('/client/profile')}>
@@ -61,7 +73,12 @@ const ClientLayout = () => {
         Settings
       </Menu.Item>
       <Menu.Divider />
-      <Menu.Item key="logout" icon={<LogoutOutlined />} onClick={logout} danger>
+      <Menu.Item
+        key="logout"
+        icon={<LogoutOutlined />}
+        onClick={handleLogout}
+        danger
+      >
         Logout
       </Menu.Item>
     </Menu>
@@ -69,17 +86,17 @@ const ClientLayout = () => {
 
   return (
     <Layout style={{ minHeight: '100vh' }}>
-      <Sider 
-        trigger={null} 
-        collapsible 
+      <Sider
+        trigger={null}
+        collapsible
         collapsed={collapsed}
         style={{ background: '#001529' }}
         width={240}
       >
-        <div style={{ 
-          height: 64, 
-          display: 'flex', 
-          alignItems: 'center', 
+        <div style={{
+          height: 64,
+          display: 'flex',
+          alignItems: 'center',
           justifyContent: 'center',
           color: '#fff',
           fontSize: collapsed ? 16 : 20,
@@ -98,8 +115,8 @@ const ClientLayout = () => {
         />
       </Sider>
       <Layout>
-        <Header style={{ 
-          padding: '0 24px', 
+        <Header style={{
+          padding: '0 24px',
           background: colorBgContainer,
           display: 'flex',
           justifyContent: 'space-between',
@@ -123,7 +140,7 @@ const ClientLayout = () => {
             <Badge count={5} size="small">
               <Button type="text" icon={<BellOutlined />} onClick={() => navigate('/client/notifications')} />
             </Badge>
-            <Dropdown overlay={userMenu} placement="bottomRight">
+            <Dropdown overlay={userMenu} placement="bottomRight" trigger={['click']}>
               <Space style={{ cursor: 'pointer' }}>
                 <Avatar icon={<UserOutlined />} style={{ backgroundColor: '#1890ff' }} />
                 <span>{user?.name || user?.username || 'Client'}</span>
@@ -131,7 +148,7 @@ const ClientLayout = () => {
             </Dropdown>
           </Space>
         </Header>
-        <Content style={{ 
+        <Content style={{
           margin: '16px',
           padding: 24,
           background: colorBgContainer,

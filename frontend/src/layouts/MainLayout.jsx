@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Layout, Menu, Button, Avatar, Dropdown, Space, Badge, Tooltip, Switch, theme } from 'antd';
+import { Layout, Menu, Button, Avatar, Dropdown, Space, Badge, Tooltip, Switch, theme, Modal } from 'antd';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import {
   DashboardOutlined,
@@ -34,10 +34,7 @@ import {
   BarChartOutlined,
   FileSearchOutlined,
   BulbOutlined,
-  ApiOutlined,
   ToolOutlined,
-  ScheduleOutlined,
-  ContactsOutlined,
   HomeOutlined,
   ShoppingOutlined
 } from '@ant-design/icons';
@@ -57,7 +54,6 @@ const MainLayout = () => {
     token: { colorBgContainer, borderRadiusLG },
   } = theme.useToken();
 
-  // Get menu items based on user role
   const getMenuItems = () => {
     const role = user?.role || 'client';
 
@@ -134,14 +130,12 @@ const MainLayout = () => {
       ]
     };
 
-    const menuItems = menuMap[role] || menuMap.client;
-    return menuItems;
+    return menuMap[role] || menuMap.client;
   };
 
   const menuItems = getMenuItems();
   const selectedKey = location.pathname;
 
-  // Get profile path based on role
   const getProfilePath = () => {
     const role = user?.role || 'client';
     const profilePaths = {
@@ -155,20 +149,19 @@ const MainLayout = () => {
     return profilePaths[role] || '/client/profile';
   };
 
-  const getNotificationsPath = () => {
-    const role = user?.role || 'client';
-    const paths = {
-      administrator: '/admin/notifications',
-      it_manager: '/it/notifications',
-      operations_manager: '/operations/notifications',
-      executive: '/executive/notifications',
-      staff: '/staff/notifications',
-      client: '/client/notifications',
-    };
-    return paths[role] || '/client/notifications';
+  const handleLogout = () => {
+    Modal.confirm({
+      title: 'Confirm Logout',
+      content: 'Are you sure you want to logout?',
+      okText: 'Yes, Logout',
+      okType: 'danger',
+      cancelText: 'Cancel',
+      onOk: () => {
+        logout();
+      }
+    });
   };
 
-  // User dropdown menu
   const userMenu = (
     <Menu>
       <Menu.Item key="profile" icon={<UserOutlined />} onClick={() => navigate(getProfilePath())}>
@@ -178,7 +171,12 @@ const MainLayout = () => {
         Settings
       </Menu.Item>
       <Menu.Divider />
-      <Menu.Item key="logout" icon={<LogoutOutlined />} onClick={logout} danger>
+      <Menu.Item
+        key="logout"
+        icon={<LogoutOutlined />}
+        onClick={handleLogout}
+        danger
+      >
         Logout
       </Menu.Item>
     </Menu>
@@ -238,9 +236,9 @@ const MainLayout = () => {
               />
             </Tooltip>
             <Badge count={5} size="small">
-              <Button type="text" icon={<BellOutlined />} onClick={() => navigate(getNotificationsPath())} />
+              <Button type="text" icon={<BellOutlined />} />
             </Badge>
-            <Dropdown overlay={userMenu} placement="bottomRight">
+            <Dropdown overlay={userMenu} placement="bottomRight" trigger={['click']}>
               <Space style={{ cursor: 'pointer' }}>
                 <Avatar icon={<UserOutlined />} style={{ backgroundColor: '#1890ff' }} />
                 <span>{user?.name || user?.username || 'User'}</span>
@@ -258,7 +256,7 @@ const MainLayout = () => {
           <Outlet />
         </Content>
         <Footer style={{ textAlign: 'center', background: '#f0f2f5' }}>
-          EDSA Management System © 2026 | Version 1.0.0 | Logged in as: {user?.name || 'System User'} ({user?.role || 'User'})
+          EDSA Management System © 2026 | Version 1.0.0 | Logged in as: {user?.name || 'User'} ({user?.role || 'User'})
         </Footer>
       </Layout>
     </Layout>

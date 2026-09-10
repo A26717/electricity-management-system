@@ -1,184 +1,314 @@
 import React, { useState } from 'react';
-import {
-  Card, Table, Tag, Button, Space, Modal, Form, Select,
-  message, Popconfirm, Typography, Tooltip, Badge,
-  Progress, Alert, Divider, Row, Col, Statistic,
-  Input, DatePicker, Switch, Upload
+import { 
+  Card, Table, Tag, Button, Space, Modal, Form, Select, message, 
+  Popconfirm, Alert, Statistic, Row, Col, Progress, Tooltip, 
+  InputNumber, Input, Radio, Divider 
 } from 'antd';
-import {
-  DatabaseOutlined, PlusOutlined, DeleteOutlined,
-  ReloadOutlined, DownloadOutlined, UploadOutlined,
-  ClockCircleOutlined, CheckCircleOutlined,
-  CloseCircleOutlined, EyeOutlined, SettingOutlined,
-  CloudUploadOutlined, FileZipOutlined, FilePdfOutlined
+import { 
+  DatabaseOutlined, PlusOutlined, DeleteOutlined, ReloadOutlined, 
+  UploadOutlined, CheckCircleOutlined, ClockCircleOutlined,
+  CloudServerOutlined, HddOutlined, CloudUploadOutlined,
+  DownloadOutlined, ThunderboltOutlined, SafetyCertificateOutlined
 } from '@ant-design/icons';
-import toast from 'react-hot-toast';
 
-const { Title, Text } = Typography;
 const { Option } = Select;
 
 const AdminBackups = () => {
   const [loading, setLoading] = useState(false);
-  const [backups, setBackups] = useState([
-    { id: 'BAK001', name: 'Full Backup 2024-08-31', size: '2.5 GB', date: '2024-08-31 02:00:00', status: 'completed', type: 'full', location: '/backups/full-20240831.tar.gz' },
-    { id: 'BAK002', name: 'Full Backup 2024-08-30', size: '2.4 GB', date: '2024-08-30 02:00:00', status: 'completed', type: 'full', location: '/backups/full-20240830.tar.gz' },
-    { id: 'BAK003', name: 'Incremental Backup 2024-08-29', size: '500 MB', date: '2024-08-29 02:00:00', status: 'completed', type: 'incremental', location: '/backups/inc-20240829.tar.gz' },
-    { id: 'BAK004', name: 'Full Backup 2024-08-28', size: '2.3 GB', date: '2024-08-28 02:00:00', status: 'failed', type: 'full', location: '/backups/full-20240828.tar.gz' }
-  ]);
-  const [isBackupModal, setIsBackupModal] = useState(false);
-  const [isRestoreModal, setIsRestoreModal] = useState(false);
-  const [isScheduleModal, setIsScheduleModal] = useState(false);
-  const [selectedBackup, setSelectedBackup] = useState(null);
+  const [isModalVisible, setIsModalVisible] = useState(false);
+  const [isStorageModalVisible, setIsStorageModalVisible] = useState(false);
   const [form] = Form.useForm();
-  const [scheduleForm] = Form.useForm();
-  const [backupProgress, setBackupProgress] = useState(0);
-  const [isRunning, setIsRunning] = useState(false);
+  const [storageForm] = Form.useForm();
+
+  // ==================== BACKUP DATA ====================
+  const [backups, setBackups] = useState([
+    { 
+      id: 'BAK001', 
+      name: 'Full Backup 2026-09-10', 
+      size: '2.5 GB', 
+      sizeGB: 2.5,
+      date: '2026-09-10 02:00:00', 
+      status: 'completed', 
+      type: 'full',
+      storage: 'primary',
+      retention: '90 days',
+      location: 'Local Storage'
+    },
+    { 
+      id: 'BAK002', 
+      name: 'Full Backup 2026-09-09', 
+      size: '2.4 GB', 
+      sizeGB: 2.4,
+      date: '2026-09-09 02:00:00', 
+      status: 'completed', 
+      type: 'full',
+      storage: 'primary',
+      retention: '90 days',
+      location: 'Local Storage'
+    },
+    { 
+      id: 'BAK003', 
+      name: 'Incremental Backup 2026-09-08', 
+      size: '500 MB', 
+      sizeGB: 0.5,
+      date: '2026-09-08 02:00:00', 
+      status: 'completed', 
+      type: 'incremental',
+      storage: 'primary',
+      retention: '30 days',
+      location: 'Local Storage'
+    },
+    { 
+      id: 'BAK004', 
+      name: 'Full Backup 2026-09-07', 
+      size: '2.5 GB', 
+      sizeGB: 2.5,
+      date: '2026-09-07 02:00:00', 
+      status: 'completed', 
+      type: 'full',
+      storage: 'cloud',
+      retention: '365 days',
+      location: 'AWS S3'
+    },
+    { 
+      id: 'BAK005', 
+      name: 'Archive Backup 2026-09-01', 
+      size: '2.3 GB', 
+      sizeGB: 2.3,
+      date: '2026-09-01 02:00:00', 
+      status: 'archived', 
+      type: 'full',
+      storage: 'archive',
+      retention: '5 years',
+      location: 'Cold Storage'
+    },
+  ]);
+
+  // ==================== 5 TB STORAGE SYSTEM ====================
+  const [storageConfig, setStorageConfig] = useState({
+    totalCapacityTB: 5,               // 5 TB Total
+    usedGB: 12.2,                     // 12.2 GB used (current backups)
+    primaryStorageGB: 2000,           // 2 TB local SSD
+    cloudStorageGB: 2000,             // 2 TB AWS S3
+    archiveStorageGB: 1000,           // 1 TB cold storage
+    retentionPolicy: '365',           // Days
+    autoCleanup: true,
+    compressionEnabled: true,
+    encryptionEnabled: true,
+  });
+
+  // ==================== STORAGE CALCULATIONS ====================
+  const totalCapacityGB = storageConfig.totalCapacityTB * 1024; // 5 TB = 5120 GB
+  const usedPercentage = (storageConfig.usedGB / totalCapacityGB) * 100;
+  const availableGB = totalCapacityGB - storageConfig.usedGB;
+
+  // ==================== BACKUP FUNCTIONS ====================
 
   const handleRunBackup = async (values) => {
-    setIsRunning(true);
-    setBackupProgress(0);
-    try {
-      const newBackup = {
-        id: `BAK${String(backups.length + 1).padStart(3, '0')}`,
-        name: `${values.backup_type} Backup ${new Date().toLocaleDateString()}`,
-        size: '2.6 GB',
-        date: new Date().toISOString(),
-        status: 'running',
-        type: values.backup_type,
-        location: `/backups/${values.backup_type}-${Date.now()}.tar.gz`
-      };
-      setBackups([newBackup, ...backups]);
-      toast.success('Backup started...');
-      setIsBackupModal(false);
-      form.resetFields();
+    setLoading(true);
+    const newBackup = {
+      id: `BAK${String(backups.length + 1).padStart(3, '0')}`,
+      name: `${values.backup_type} Backup ${new Date().toLocaleDateString()}`,
+      size: values.backup_type === 'full' ? '2.6 GB' : '550 MB',
+      sizeGB: values.backup_type === 'full' ? 2.6 : 0.55,
+      date: new Date().toLocaleString(),
+      status: 'running',
+      type: values.backup_type,
+      storage: values.storage_tier || 'primary',
+      retention: values.retention_days ? `${values.retention_days} days` : '365 days',
+      location: values.storage_tier === 'cloud' ? 'AWS S3' : 
+                values.storage_tier === 'archive' ? 'Cold Storage' : 'Local Storage',
+    };
 
-      // Simulate progress
-      for (let i = 0; i <= 100; i += 10) {
-        await new Promise(resolve => setTimeout(resolve, 300));
-        setBackupProgress(i);
-      }
+    setBackups([newBackup, ...backups]);
+    message.success('Backup started...');
+    setIsModalVisible(false);
+    form.resetFields();
 
-      setBackups(prev => prev.map(b =>
+    // Simulate backup completion
+    setTimeout(() => {
+      setBackups(prev => prev.map(b => 
         b.id === newBackup.id ? { ...b, status: 'completed' } : b
       ));
-      toast.success('Backup completed successfully!');
-    } catch (error) {
-      toast.error('Backup failed');
-    } finally {
-      setIsRunning(false);
-      setBackupProgress(0);
-    }
+      message.success(`Backup completed! Size: ${newBackup.size}`);
+      setLoading(false);
+    }, 3000);
   };
 
-  const handleRestoreBackup = (backup) => {
+  const handleRestore = (backup) => {
     Modal.confirm({
       title: 'Confirm Restore',
-      content: `Are you sure you want to restore from "${backup.name}"? This will overwrite current data.`,
+      content: `Restore from "${backup.name}"? This will overwrite current data.`,
+      okType: 'danger',
       onOk: () => {
-        toast.success(`Restoring from ${backup.name}...`);
-        setTimeout(() => {
-          toast.success('Restore completed successfully!');
-        }, 2000);
+        message.success(`Restoring from ${backup.name}...`);
+        setTimeout(() => message.success('Restore completed!'), 2000);
       }
     });
   };
 
-  const handleDeleteBackup = (backupId) => {
-    setBackups(prev => prev.filter(b => b.id !== backupId));
-    toast.success('Backup deleted successfully');
+  const handleDownload = (backup) => {
+    message.success(`Downloading ${backup.name}...`);
+    setTimeout(() => message.success('Download completed!'), 1500);
   };
 
-  const handleDownloadBackup = (backup) => {
-    toast.success(`Downloading ${backup.name}...`);
+  const handleDelete = (id) => {
+    const backup = backups.find(b => b.id === id);
+    setBackups(prev => prev.filter(b => b.id !== id));
+    setStorageConfig(prev => ({
+      ...prev,
+      usedGB: Math.max(0, prev.usedGB - (backup?.sizeGB || 0))
+    }));
+    message.success('Backup deleted');
   };
 
-  const handleScheduleBackup = async (values) => {
-    try {
-      toast.success(`Backup scheduled ${values.frequency} at ${values.time}`);
-      setIsScheduleModal(false);
-      scheduleForm.resetFields();
-    } catch (error) {
-      toast.error('Failed to schedule backup');
-    }
-  };
-
-  const handleViewBackup = (backup) => {
-    setSelectedBackup(backup);
-    Modal.info({
-      title: 'Backup Details',
-      content: (
-        <div className="mt-4">
-          <p><strong>Name:</strong> {backup.name}</p>
-          <p><strong>Size:</strong> {backup.size}</p>
-          <p><strong>Type:</strong> <Tag color={backup.type === 'full' ? 'green' : 'blue'}>{backup.type.toUpperCase()}</Tag></p>
-          <p><strong>Status:</strong> <Tag color={backup.status === 'completed' ? 'green' : backup.status === 'running' ? 'orange' : 'red'}>{backup.status.toUpperCase()}</Tag></p>
-          <p><strong>Date:</strong> {new Date(backup.date).toLocaleString()}</p>
-          <p><strong>Location:</strong> <span className="font-mono text-sm">{backup.location}</span></p>
-        </div>
-      ),
-      width: 450
+  const handleArchiveBackup = (backup) => {
+    Modal.confirm({
+      title: 'Archive Backup',
+      content: `Move "${backup.name}" to cold storage (5-year retention)?`,
+      onOk: () => {
+        setBackups(prev => prev.map(b => 
+          b.id === backup.id ? { 
+            ...b, 
+            status: 'archived', 
+            storage: 'archive',
+            location: 'Cold Storage',
+            retention: '5 years'
+          } : b
+        ));
+        message.success('Backup moved to archive storage');
+      }
     });
   };
 
-  const getStatusIcon = (status) => {
-    switch (status) {
-      case 'completed': return <CheckCircleOutlined className="text-green-500" />;
-      case 'running': return <ClockCircleOutlined className="text-orange-500" />;
-      case 'failed': return <CloseCircleOutlined className="text-red-500" />;
-      default: return <DatabaseOutlined />;
-    }
+  const handleRefresh = () => {
+    setLoading(true);
+    setTimeout(() => {
+      setLoading(false);
+      message.success('Backup list refreshed');
+    }, 800);
   };
 
+  // ==================== STORAGE FUNCTIONS ====================
+
+  const handleExpandStorage = async (values) => {
+    setStorageConfig(prev => ({
+      ...prev,
+      totalCapacityTB: values.totalCapacityTB,
+      retentionPolicy: values.retentionPolicy,
+      autoCleanup: values.autoCleanup,
+    }));
+    message.success(`Storage expanded to ${values.totalCapacityTB} TB!`);
+    setIsStorageModalVisible(false);
+    storageForm.resetFields();
+  };
+
+  const handleCleanupOldBackups = () => {
+    Modal.confirm({
+      title: 'Auto Cleanup',
+      content: `Delete backups older than ${storageConfig.retentionPolicy} days?`,
+      onOk: () => {
+        const cutoffDate = new Date();
+        cutoffDate.setDate(cutoffDate.getDate() - parseInt(storageConfig.retentionPolicy));
+        
+        const oldBackups = backups.filter(b => new Date(b.date) < cutoffDate && b.storage !== 'archive');
+        const freedGB = oldBackups.reduce((sum, b) => sum + b.sizeGB, 0);
+        
+        setBackups(prev => prev.filter(b => new Date(b.date) >= cutoffDate || b.storage === 'archive'));
+        setStorageConfig(prev => ({
+          ...prev,
+          usedGB: Math.max(0, prev.usedGB - freedGB)
+        }));
+        
+        message.success(`Cleaned up ${oldBackups.length} old backups. Freed ${freedGB.toFixed(2)} GB`);
+      }
+    });
+  };
+
+  // ==================== COLUMNS ====================
   const columns = [
-    { title: 'Backup Name', dataIndex: 'name', key: 'name' },
+    { 
+      title: 'Backup Name', 
+      dataIndex: 'name', 
+      key: 'name',
+      render: (name, r) => (
+        <div>
+          <div style={{ fontWeight: '600' }}>{name}</div>
+          <div style={{ fontSize: '12px', color: '#999' }}>{r.id}</div>
+        </div>
+      )
+    },
     { title: 'Size', dataIndex: 'size', key: 'size' },
-    {
-      title: 'Type',
-      dataIndex: 'type',
-      key: 'type',
-      render: (type) => <Tag color={type === 'full' ? 'green' : 'blue'}>{type.toUpperCase()}</Tag>
+    { 
+      title: 'Type', 
+      dataIndex: 'type', 
+      key: 'type', 
+      render: (t) => (
+        <Tag color={t === 'full' ? 'green' : t === 'incremental' ? 'blue' : 'orange'}>
+          {t.toUpperCase()}
+        </Tag>
+      )
     },
-    {
-      title: 'Date',
-      dataIndex: 'date',
-      key: 'date',
-      render: (date) => new Date(date).toLocaleString()
+    { 
+      title: 'Storage', 
+      dataIndex: 'storage', 
+      key: 'storage', 
+      render: (s, r) => (
+        <Tooltip title={r.location}>
+          <Tag 
+            icon={s === 'cloud' ? <CloudServerOutlined /> : 
+                  s === 'archive' ? <HddOutlined /> : 
+                  <DatabaseOutlined />}
+            color={s === 'primary' ? 'blue' : s === 'cloud' ? 'cyan' : 'purple'}
+          >
+            {s.toUpperCase()}
+          </Tag>
+        </Tooltip>
+      )
     },
-    {
-      title: 'Status',
-      dataIndex: 'status',
-      key: 'status',
-      render: (status) => (
-        <Tag color={status === 'completed' ? 'green' : status === 'running' ? 'orange' : 'red'}>
-          {getStatusIcon(status)} {status.toUpperCase()}
+    { title: 'Date', dataIndex: 'date', key: 'date' },
+    { title: 'Retention', dataIndex: 'retention', key: 'retention' },
+    { 
+      title: 'Status', 
+      dataIndex: 'status', 
+      key: 'status', 
+      render: (s) => (
+        <Tag color={s === 'completed' ? 'green' : s === 'running' ? 'orange' : 'purple'}>
+          {s.toUpperCase()}
         </Tag>
       )
     },
     {
-      title: 'Action',
-      key: 'action',
-      render: (_, record) => (
+      title: 'Actions', 
+      key: 'actions',
+      render: (_, r) => (
         <Space>
-          <Tooltip title="View Details">
-            <Button size="small" icon={<EyeOutlined />} onClick={() => handleViewBackup(record)} />
+          <Tooltip title="Restore">
+            <Button 
+              size="small" 
+              type="primary" 
+              icon={<UploadOutlined />} 
+              onClick={() => handleRestore(r)} 
+              disabled={r.status === 'running'} 
+            />
           </Tooltip>
-          {record.status === 'completed' && (
-            <>
-              <Tooltip title="Download">
-                <Button size="small" icon={<DownloadOutlined />} onClick={() => handleDownloadBackup(record)} />
-              </Tooltip>
-              <Tooltip title="Restore">
-                <Button size="small" type="primary" icon={<UploadOutlined />} onClick={() => handleRestoreBackup(record)} />
-              </Tooltip>
-            </>
+          <Tooltip title="Download">
+            <Button 
+              size="small" 
+              icon={<DownloadOutlined />} 
+              onClick={() => handleDownload(r)} 
+            />
+          </Tooltip>
+          {r.storage !== 'archive' && (
+            <Tooltip title="Archive">
+              <Button 
+                size="small" 
+                icon={<HddOutlined />} 
+                onClick={() => handleArchiveBackup(r)} 
+              />
+            </Tooltip>
           )}
-          <Popconfirm
-            title="Delete Backup"
-            description="Are you sure you want to delete this backup?"
-            onConfirm={() => handleDeleteBackup(record.id)}
-            okText="Yes"
-            cancelText="No"
-          >
+          <Popconfirm title="Delete backup?" onConfirm={() => handleDelete(r.id)}>
             <Button size="small" danger icon={<DeleteOutlined />} />
           </Popconfirm>
         </Space>
@@ -186,146 +316,280 @@ const AdminBackups = () => {
     }
   ];
 
+  // ==================== RENDER ====================
   return (
-    <div className="p-6 bg-gray-50 min-h-screen">
-      <div className="flex justify-between items-center mb-6">
+    <div style={{ padding: '24px', background: '#f0f2f5', minHeight: '100vh' }}>
+      {/* Header */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '24px', flexWrap: 'wrap', gap: '16px' }}>
         <div>
-          <Title level={2} className="flex items-center gap-2">
-            <DatabaseOutlined className="text-red-500" />
-            Backup Management
-          </Title>
-          <Text className="text-gray-600">Manage system backups</Text>
+          <h1 style={{ fontSize: '24px', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
+            <DatabaseOutlined style={{ color: '#722ed1' }} /> Backup Management
+          </h1>
+          <p style={{ color: '#666', margin: '4px 0 0 0' }}>
+            Manage system backups • Total Capacity: <strong>{storageConfig.totalCapacityTB} TB</strong>
+          </p>
         </div>
         <Space>
-          <Button icon={<ReloadOutlined />} onClick={() => setLoading(true)}>Refresh</Button>
-          <Button icon={<SettingOutlined />} onClick={() => setIsScheduleModal(true)}>
-            Schedule Backup
+          <Button icon={<ThunderboltOutlined />} onClick={handleCleanupOldBackups}>Auto Cleanup</Button>
+          <Button icon={<CloudUploadOutlined />} onClick={() => setIsStorageModalVisible(true)}>
+            Expand Storage
           </Button>
-          <Button type="primary" icon={<PlusOutlined />} onClick={() => setIsBackupModal(true)}>
-            Run Backup Now
+          <Button icon={<ReloadOutlined />} onClick={handleRefresh} loading={loading}>Refresh</Button>
+          <Button type="primary" icon={<PlusOutlined />} onClick={() => setIsModalVisible(true)}>
+            Run Backup
           </Button>
         </Space>
       </div>
 
-      <Row gutter={[16, 16]} className="mb-6">
+      {/* Stats Cards */}
+      <Row gutter={[16, 16]} style={{ marginBottom: '24px' }}>
         <Col xs={24} sm={12} lg={6}>
-          <Card className="border-l-4 border-green-500">
-            <Statistic title="Total Backups" value={backups.length} prefix={<DatabaseOutlined />} />
+          <Card style={{ borderLeft: '4px solid #1890ff' }}>
+            <Statistic 
+              title="Total Capacity" 
+              value={storageConfig.totalCapacityTB} 
+              suffix="TB" 
+              prefix={<CloudServerOutlined />} 
+            />
+            <Progress 
+              percent={usedPercentage} 
+              size="small" 
+              strokeColor={usedPercentage > 80 ? '#ff4d4f' : '#1890ff'}
+              style={{ marginTop: '8px' }}
+            />
+            <div style={{ fontSize: '12px', color: '#999', marginTop: '4px' }}>
+              {storageConfig.usedGB.toFixed(2)} GB / {(totalCapacityGB).toFixed(0)} GB used
+            </div>
           </Card>
         </Col>
         <Col xs={24} sm={12} lg={6}>
-          <Card className="border-l-4 border-blue-500">
-            <Statistic title="Completed" value={backups.filter(b => b.status === 'completed').length} prefix={<CheckCircleOutlined className="text-green-500" />} />
+          <Card style={{ borderLeft: '4px solid #52c41a' }}>
+            <Statistic 
+              title="Available Space" 
+              value={(availableGB / 1024).toFixed(2)} 
+              suffix="TB" 
+              prefix={<HddOutlined />} 
+              valueStyle={{ color: '#52c41a' }} 
+            />
+            <div style={{ fontSize: '12px', color: '#999', marginTop: '4px' }}>
+              {availableGB.toFixed(2)} GB available
+            </div>
           </Card>
         </Col>
         <Col xs={24} sm={12} lg={6}>
-          <Card className="border-l-4 border-orange-500">
-            <Statistic title="Total Size" value="8.2" suffix="GB" prefix={<FileZipOutlined />} />
+          <Card style={{ borderLeft: '4px solid #13c2c2' }}>
+            <Statistic 
+              title="Total Backups" 
+              value={backups.length} 
+              prefix={<DatabaseOutlined />} 
+            />
+            <div style={{ fontSize: '12px', color: '#999', marginTop: '4px' }}>
+              {backups.filter(b => b.status === 'completed').length} completed
+            </div>
           </Card>
         </Col>
         <Col xs={24} sm={12} lg={6}>
-          <Card className="border-l-4 border-purple-500">
-            <Statistic title="Last Backup" value={backups[0]?.name || 'N/A'} />
+          <Card style={{ borderLeft: '4px solid #faad14' }}>
+            <Statistic 
+              title="Retention Policy" 
+              value={storageConfig.retentionPolicy} 
+              suffix="days" 
+              prefix={<ClockCircleOutlined />} 
+              valueStyle={{ color: '#faad14' }} 
+            />
+            <div style={{ fontSize: '12px', color: '#999', marginTop: '4px' }}>
+              Auto cleanup: {storageConfig.autoCleanup ? 'Enabled' : 'Disabled'}
+            </div>
           </Card>
         </Col>
       </Row>
 
-      {isRunning && (
-        <Card className="mb-4">
-          <Alert
-            message="Backup in Progress"
-            description={
-              <div className="mt-2">
-                <Progress percent={backupProgress} status={backupProgress < 100 ? 'active' : 'success'} />
-                <Text className="text-sm text-gray-500">Creating backup... Please wait.</Text>
+      {/* Storage Tier Breakdown */}
+      <Card title="Storage Tiers Distribution" style={{ marginBottom: '24px' }}>
+        <Row gutter={[16, 16]}>
+          <Col xs={24} sm={8}>
+            <div style={{ padding: '16px', background: '#e6f7ff', borderRadius: '8px', border: '1px solid #91d5ff' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                <DatabaseOutlined style={{ color: '#1890ff', fontSize: '20px' }} />
+                <strong>Primary Storage</strong>
               </div>
-            }
-            type="info"
-            showIcon
-          />
-        </Card>
-      )}
+              <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#1890ff' }}>
+                {(storageConfig.primaryStorageGB / 1024).toFixed(1)} TB
+              </div>
+              <div style={{ fontSize: '12px', color: '#666' }}>Local SSD • High-speed access</div>
+            </div>
+          </Col>
+          <Col xs={24} sm={8}>
+            <div style={{ padding: '16px', background: '#e6fffb', borderRadius: '8px', border: '1px solid #87e8de' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                <CloudServerOutlined style={{ color: '#13c2c2', fontSize: '20px' }} />
+                <strong>Cloud Storage</strong>
+              </div>
+              <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#13c2c2' }}>
+                {(storageConfig.cloudStorageGB / 1024).toFixed(1)} TB
+              </div>
+              <div style={{ fontSize: '12px', color: '#666' }}>AWS S3 • Off-site backup</div>
+            </div>
+          </Col>
+          <Col xs={24} sm={8}>
+            <div style={{ padding: '16px', background: '#f9f0ff', borderRadius: '8px', border: '1px solid #d3adf7' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                <HddOutlined style={{ color: '#722ed1', fontSize: '20px' }} />
+                <strong>Archive Storage</strong>
+              </div>
+              <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#722ed1' }}>
+                {(storageConfig.archiveStorageGB / 1024).toFixed(1)} TB
+              </div>
+              <div style={{ fontSize: '12px', color: '#666' }}>Cold Storage • 5-year retention</div>
+            </div>
+          </Col>
+        </Row>
+      </Card>
 
+      {/* Alerts */}
       <Alert
-        message="Last Backup"
-        description={`${backups[0]?.name || 'No backups'} completed at ${backups[0]?.date ? new Date(backups[0].date).toLocaleString() : 'N/A'}`}
-        type="success"
+        message="Backup Schedule & Policy"
+        description={`Daily backup at 02:00 AM • Retention: ${storageConfig.retentionPolicy} days • Encryption: ${storageConfig.encryptionEnabled ? 'AES-256' : 'Disabled'} • Compression: ${storageConfig.compressionEnabled ? 'Enabled (saves ~40%)' : 'Disabled'}`}
+        type="info"
         showIcon
-        className="mb-4"
+        style={{ marginBottom: '16px' }}
       />
 
-      <Card className="shadow-sm">
-        <Table
-          dataSource={backups}
-          columns={columns}
-          rowKey="id"
-          loading={loading}
-          pagination={{ pageSize: 5 }}
+      {usedPercentage > 80 && (
+        <Alert
+          message="Storage Warning"
+          description={`You are using ${usedPercentage.toFixed(1)}% of your storage capacity. Consider expanding storage.`}
+          type="warning"
+          showIcon
+          style={{ marginBottom: '16px' }}
+        />
+      )}
+
+      {/* Backup Table */}
+      <Card title={`All Backups (${backups.length})`}>
+        <Table 
+          dataSource={backups} 
+          columns={columns} 
+          rowKey="id" 
+          loading={loading} 
+          pagination={{ pageSize: 10, showSizeChanger: true }} 
         />
       </Card>
 
-      {/* Run Backup Modal */}
+      {/* ==================== RUN BACKUP MODAL ==================== */}
       <Modal
-        title="Run Backup"
-        open={isBackupModal}
-        onCancel={() => { setIsBackupModal(false); form.resetFields(); }}
+        title="Run New Backup"
+        open={isModalVisible}
+        onCancel={() => { setIsModalVisible(false); form.resetFields(); }}
         footer={null}
-        width={400}
+        width={500}
       >
         <Form form={form} onFinish={handleRunBackup} layout="vertical">
           <Form.Item name="backup_type" label="Backup Type" rules={[{ required: true }]}>
-            <Select placeholder="Select backup type" size="large">
-              <Option value="full">Full Backup</Option>
-              <Option value="incremental">Incremental Backup</Option>
-              <Option value="differential">Differential Backup</Option>
+            <Radio.Group>
+              <Radio.Button value="full">Full Backup</Radio.Button>
+              <Radio.Button value="incremental">Incremental</Radio.Button>
+              <Radio.Button value="differential">Differential</Radio.Button>
+            </Radio.Group>
+          </Form.Item>
+
+          <Form.Item name="storage_tier" label="Storage Tier" rules={[{ required: true }]}>
+            <Select placeholder="Select storage tier" size="large">
+              <Option value="primary">🔵 Primary (Local SSD) - Fast</Option>
+              <Option value="cloud">☁️ Cloud (AWS S3) - Off-site</Option>
+              <Option value="archive">📦 Archive (Cold) - Long-term</Option>
             </Select>
           </Form.Item>
+
+          <Form.Item name="retention_days" label="Retention Period (Days)" initialValue={365}>
+            <InputNumber min={30} max={1825} style={{ width: '100%' }} />
+          </Form.Item>
+
           <Alert
-            message="Backup Information"
-            description="This will create a backup of all system data. Please ensure sufficient storage space."
+            message="Backup Info"
+            description="Backup will run in the background. You'll be notified when complete."
             type="info"
             showIcon
-            className="mb-4"
+            style={{ marginBottom: '16px' }}
           />
+
           <Form.Item>
-            <Button type="primary" htmlType="submit" block size="large" loading={isRunning}>
-              <CloudUploadOutlined /> Start Backup
+            <Button type="primary" htmlType="submit" block size="large" loading={loading}>
+              Start Backup
             </Button>
           </Form.Item>
         </Form>
       </Modal>
 
-      {/* Schedule Backup Modal */}
+      {/* ==================== STORAGE EXPANSION MODAL ==================== */}
       <Modal
-        title="Schedule Backup"
-        open={isScheduleModal}
-        onCancel={() => { setIsScheduleModal(false); scheduleForm.resetFields(); }}
+        title="Expand Storage Capacity"
+        open={isStorageModalVisible}
+        onCancel={() => { setIsStorageModalVisible(false); storageForm.resetFields(); }}
         footer={null}
-        width={450}
+        width={500}
       >
-        <Form form={scheduleForm} onFinish={handleScheduleBackup} layout="vertical">
-          <Form.Item name="frequency" label="Frequency" rules={[{ required: true }]}>
-            <Select placeholder="Select frequency" size="large">
-              <Option value="daily">Daily</Option>
-              <Option value="weekly">Weekly</Option>
-              <Option value="monthly">Monthly</Option>
+        <Form 
+          form={storageForm} 
+          onFinish={handleExpandStorage} 
+          layout="vertical"
+          initialValues={storageConfig}
+        >
+          <Alert
+            message="Storage Expansion"
+            description="Increase your total backup storage capacity. Current: 5 TB"
+            type="info"
+            showIcon
+            style={{ marginBottom: '16px' }}
+          />
+
+          <Form.Item name="totalCapacityTB" label="Total Capacity (TB)" rules={[{ required: true }]}>
+            <InputNumber 
+              min={5} 
+              max={100} 
+              style={{ width: '100%' }} 
+              size="large"
+              formatter={(v) => `${v} TB`}
+              parser={(v) => v.replace(' TB', '')}
+            />
+          </Form.Item>
+
+          <Form.Item name="retentionPolicy" label="Retention Policy (Days)" rules={[{ required: true }]}>
+            <Select size="large">
+              <Option value="30">30 days</Option>
+              <Option value="90">90 days</Option>
+              <Option value="180">180 days</Option>
+              <Option value="365">1 year</Option>
+              <Option value="730">2 years</Option>
+              <Option value="1825">5 years</Option>
             </Select>
           </Form.Item>
-          <Form.Item name="time" label="Time" rules={[{ required: true }]}>
-            <DatePicker picker="time" format="HH:mm" className="w-full" size="large" />
-          </Form.Item>
-          <Form.Item name="type" label="Backup Type" rules={[{ required: true }]}>
-            <Select placeholder="Select backup type" size="large">
-              <Option value="full">Full Backup</Option>
-              <Option value="incremental">Incremental Backup</Option>
+
+          <Form.Item name="autoCleanup" label="Automatic Cleanup" valuePropName="checked">
+            <Select size="large">
+              <Option value={true}>✅ Enabled (recommended)</Option>
+              <Option value={false}>❌ Disabled</Option>
             </Select>
           </Form.Item>
-          <Form.Item label="Auto Cleanup" valuePropName="checked">
-            <Switch defaultChecked />
-          </Form.Item>
+
+          <Alert
+            message="💡 Pricing Estimate"
+            description={
+              <div>
+                <div>• 5 TB: <strong>$0</strong> (included)</div>
+                <div>• 10 TB: <strong>~$15/month</strong></div>
+                <div>• 25 TB: <strong>~$40/month</strong></div>
+                <div>• 50 TB: <strong>~$85/month</strong></div>
+              </div>
+            }
+            type="success"
+            showIcon
+            style={{ marginBottom: '16px' }}
+          />
+
           <Form.Item>
             <Button type="primary" htmlType="submit" block size="large">
-              Save Schedule
+              Confirm Expansion
             </Button>
           </Form.Item>
         </Form>

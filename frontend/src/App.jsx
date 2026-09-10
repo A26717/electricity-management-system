@@ -7,6 +7,14 @@ import enUS from 'antd/locale/en_US';
 import MainLayout from './layouts/MainLayout';
 import ClientLayout from './layouts/ClientLayout';
 
+// Admin Pages
+import AdminDashboard from './pages/admin/AdminDashboard';
+import UserManagement from './pages/admin/UserManagement';
+import RoleManagement from './pages/admin/RoleManagement';
+import AuditLogs from './pages/admin/AuditLogs';
+import AdminSystemSettings from './pages/admin/AdminSystemSettings';
+import AdminBackups from './pages/admin/AdminBackups';
+
 // IT Manager Pages
 import ITDashboard from './pages/it/ITDashboard';
 import ITSecurityEvents from './pages/it/ITSecurityEvents';
@@ -71,6 +79,11 @@ import StaffProfile from './pages/staff/StaffProfile';
 
 // Auth Pages
 import ClientLogin from './pages/auth/ClientLogin';
+import ITLogin from './pages/auth/ITLogin';
+import OperationsLogin from './pages/auth/OperationsLogin';
+import ExecutiveLogin from './pages/auth/ExecutiveLogin';
+import StaffLogin from './pages/auth/StaffLogin';
+import AdminLogin from './pages/auth/AdminLogin';
 
 // Error Pages
 import NotFound from './pages/NotFound';
@@ -117,26 +130,28 @@ function App() {
                 }}
               >
                 <Routes>
-                  {/* Root Redirect - IMPORTANT: This is why / was showing 404 */}
+                  {/* Root Redirect */}
                   <Route path="/" element={<Navigate to="/login" replace />} />
 
-                  {/* Auth Routes */}
+                  {/* Auth Routes - All 6 Role-Specific Login Pages */}
                   <Route path="/login" element={<ClientLogin />} />
+                  <Route path="/login/client" element={<ClientLogin />} />
+                  <Route path="/login/it" element={<ITLogin />} />
+                  <Route path="/login/operations" element={<OperationsLogin />} />
+                  <Route path="/login/executive" element={<ExecutiveLogin />} />
+                  <Route path="/login/staff" element={<StaffLogin />} />
+                  <Route path="/login/admin" element={<AdminLogin />} />
 
-                  {/* Client Routes */}
-                  <Route path="/client" element={<ClientLayout />}>
-                    <Route index element={<Navigate to="/client/dashboard" replace />} />
-                    <Route path="dashboard" element={<ClientDashboard />} />
-                    <Route path="meters" element={<ClientMeters />} />
-                    <Route path="tokens" element={<ClientTokens />} />
-                    <Route path="bills" element={<ClientBills />} />
-                    <Route path="payments" element={<ClientPayments />} />
-                    <Route path="complaints" element={<ClientComplaints />} />
-                    <Route path="outages" element={<ClientOutages />} />
-                    <Route path="outage-map" element={<ClientOutageMap />} />
-                    <Route path="buy-credit" element={<ClientBuyCredit />} />
-                    <Route path="profile" element={<ClientProfile />} />
-                    <Route path="*" element={<Navigate to="/client/dashboard" replace />} />
+                  {/* Admin Routes */}
+                  <Route path="/admin" element={<MainLayout />}>
+                    <Route index element={<Navigate to="/admin/dashboard" replace />} />
+                    <Route path="dashboard" element={<AdminDashboard />} />
+                    <Route path="users" element={<UserManagement />} />
+                    <Route path="roles" element={<RoleManagement />} />
+                    <Route path="audit-log" element={<AuditLogs />} />
+                    <Route path="system-settings" element={<AdminSystemSettings />} />
+                    <Route path="backups" element={<AdminBackups />} />
+                    <Route path="*" element={<Navigate to="/admin/dashboard" replace />} />
                   </Route>
 
                   {/* IT Manager Routes */}
@@ -203,6 +218,22 @@ function App() {
                     <Route path="notifications" element={<StaffNotifications />} />
                     <Route path="profile" element={<StaffProfile />} />
                     <Route path="*" element={<Navigate to="/staff/dashboard" replace />} />
+                  </Route>
+
+                  {/* Client Routes */}
+                  <Route path="/client" element={<ClientLayout />}>
+                    <Route index element={<Navigate to="/client/dashboard" replace />} />
+                    <Route path="dashboard" element={<ClientDashboard />} />
+                    <Route path="meters" element={<ClientMeters />} />
+                    <Route path="tokens" element={<ClientTokens />} />
+                    <Route path="bills" element={<ClientBills />} />
+                    <Route path="payments" element={<ClientPayments />} />
+                    <Route path="complaints" element={<ClientComplaints />} />
+                    <Route path="outages" element={<ClientOutages />} />
+                    <Route path="outage-map" element={<ClientOutageMap />} />
+                    <Route path="buy-credit" element={<ClientBuyCredit />} />
+                    <Route path="profile" element={<ClientProfile />} />
+                    <Route path="*" element={<Navigate to="/client/dashboard" replace />} />
                   </Route>
 
                   {/* 404 - Catch All */}

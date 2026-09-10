@@ -1,366 +1,92 @@
 import React, { useState } from 'react';
-import {
-  Card,
-  Table,
-  Tag,
-  Button,
-  Space,
-  Input,
-  Select,
-  message,
-  Modal,
-  Descriptions,
-  Typography,
-  Row,
-  Col,
-  Statistic,
-  Badge,
-  Tooltip,
-  Alert
-} from 'antd';
-import {
-  AuditOutlined,
-  SearchOutlined,
-  ReloadOutlined,
-  ExportOutlined,
-  EyeOutlined,
-  ClearOutlined,
-  CheckCircleOutlined,
-  CloseCircleOutlined,
-  FileTextOutlined
-} from '@ant-design/icons';
+import { Card, Table, Tag, Input, Select, Button, Space, DatePicker, message } from 'antd';
+import { AuditOutlined, SearchOutlined, DownloadOutlined, ReloadOutlined, FilterOutlined } from '@ant-design/icons';
 
-const { Title, Text } = Typography;
+const { RangePicker } = DatePicker;
 const { Option } = Select;
 
-const AdminAuditLog = () => {
-  const [loading, setLoading] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [filterType, setFilterType] = useState('all');
-  const [filterStatus, setFilterStatus] = useState('all');
-  const [isDetailModal, setIsDetailModal] = useState(false);
-  const [selectedLog, setSelectedLog] = useState(null);
+const AuditLogs = () => {
+  const [search, setSearch] = useState('');
+  const [filterAction, setFilterAction] = useState('all');
 
-  const logs = [
-    { 
-      id: 'AUD001', 
-      user: 'admin', 
-      action: 'User Created', 
-      details: 'Created user staff_billing with admin privileges', 
-      ip: '192.168.1.100', 
-      timestamp: '2026-09-06T10:00:00', 
-      status: 'success', 
-      module: 'User Management' 
-    },
-    { 
-      id: 'AUD002', 
-      user: 'admin', 
-      action: 'System Config', 
-      details: 'Updated system settings for production environment', 
-      ip: '192.168.1.100', 
-      timestamp: '2026-09-06T08:30:00', 
-      status: 'success', 
-      module: 'System' 
-    },
-    { 
-      id: 'AUD003', 
-      user: 'ops_manager', 
-      action: 'Request Approved', 
-      details: 'Approved exception request EXC001 for debt waiver', 
-      ip: '192.168.1.101', 
-      timestamp: '2026-09-05T17:00:00', 
-      status: 'success', 
-      module: 'Operations' 
-    },
-    { 
-      id: 'AUD004', 
-      user: 'admin', 
-      action: 'User Deleted', 
-      details: 'Deleted user test_user due to inactivity', 
-      ip: '192.168.1.100', 
-      timestamp: '2026-09-05T16:30:00', 
-      status: 'success', 
-      module: 'User Management' 
-    },
-    { 
-      id: 'AUD005', 
-      user: 'it_manager', 
-      action: 'Backup Created', 
-      details: 'Full backup completed with 2.5 GB size', 
-      ip: '192.168.1.102', 
-      timestamp: '2026-09-05T02:00:00', 
-      status: 'success', 
-      module: 'Backup' 
-    },
-    { 
-      id: 'AUD006', 
-      user: 'client_john', 
-      action: 'Login Failed', 
-      details: 'Failed login attempt from unknown device', 
-      ip: '192.168.1.105', 
-      timestamp: '2026-08-31T22:00:00', 
-      status: 'failed', 
-      module: 'Authentication' 
-    }
-  ];
+  const [logs] = useState([
+    { id: 1, user: 'admin', action: 'LOGIN_SUCCESS', module: 'Auth', details: 'User logged in from 192.168.1.1', ip: '192.168.1.1', status: 'success', time: '2026-09-10 17:20:15' },
+    { id: 2, user: 'admin', action: 'USER_CREATED', module: 'Users', details: 'Created user: staff_john', ip: '192.168.1.1', status: 'success', time: '2026-09-10 17:15:30' },
+    { id: 3, user: 'it_manager', action: 'LOGIN_SUCCESS', module: 'Auth', details: 'IT Manager logged in', ip: '192.168.1.5', status: 'success', time: '2026-09-10 16:45:00' },
+    { id: 4, user: 'unknown', action: 'LOGIN_FAILED', module: 'Auth', details: 'Failed login for username: admin', ip: '10.0.0.99', status: 'failed', time: '2026-09-10 16:30:15' },
+    { id: 5, user: 'admin', action: 'ROLE_UPDATED', module: 'Roles', details: 'Updated permissions for IT Manager', ip: '192.168.1.1', status: 'success', time: '2026-09-10 15:50:20' },
+    { id: 6, user: 'system', action: 'BACKUP_COMPLETED', module: 'Backups', details: 'Automated full backup completed (2.5 GB)', ip: 'localhost', status: 'success', time: '2026-09-10 02:00:00' },
+    { id: 7, user: 'ops_manager', action: 'LOGIN_SUCCESS', module: 'Auth', details: 'Operations Manager logged in', ip: '192.168.1.8', status: 'success', time: '2026-09-10 11:15:45' },
+    { id: 8, user: 'staff_billing', action: 'PAYMENT_VERIFIED', module: 'Payments', details: 'Verified payment PAY-20260910-001', ip: '192.168.1.10', status: 'success', time: '2026-09-10 10:20:00' },
+  ]);
 
-  const [filteredLogs, setFilteredLogs] = useState(logs);
-
-  const handleSearch = (value) => {
-    setSearchTerm(value);
-    if (value) {
-      const filtered = logs.filter(log =>
-        log.action.toLowerCase().includes(value.toLowerCase()) ||
-        log.user.toLowerCase().includes(value.toLowerCase()) ||
-        log.details.toLowerCase().includes(value.toLowerCase())
-      );
-      setFilteredLogs(filtered);
-    } else {
-      setFilteredLogs(logs);
-    }
+  const getStatusColor = (s) => s === 'success' ? 'green' : s === 'failed' ? 'red' : 'orange';
+  const getActionColor = (a) => {
+    if (a.includes('LOGIN_SUCCESS')) return 'green';
+    if (a.includes('LOGIN_FAILED')) return 'red';
+    if (a.includes('CREATED')) return 'blue';
+    if (a.includes('UPDATED')) return 'orange';
+    if (a.includes('DELETED')) return 'red';
+    if (a.includes('BACKUP')) return 'purple';
+    return 'default';
   };
 
-  const handleFilterChange = (type, status) => {
-    setFilterType(type);
-    setFilterStatus(status);
-    let filtered = logs;
-    if (type !== 'all') {
-      filtered = filtered.filter(log => log.module === type);
-    }
-    if (status !== 'all') {
-      filtered = filtered.filter(log => log.status === status);
-    }
-    setFilteredLogs(filtered);
-  };
-
-  const handleReset = () => {
-    setSearchTerm('');
-    setFilterType('all');
-    setFilterStatus('all');
-    setFilteredLogs(logs);
-    message.info('All filters cleared');
-  };
-
-  const handleRefresh = () => {
-    setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
-      setFilteredLogs(logs);
-      message.success('Logs refreshed');
-    }, 500);
-  };
-
-  const handleExport = () => {
-    message.success('Audit logs exported successfully!');
-  };
+  const filtered = logs.filter(l => {
+    const matchSearch = !search || l.user.toLowerCase().includes(search.toLowerCase()) || l.action.toLowerCase().includes(search.toLowerCase()) || l.details.toLowerCase().includes(search.toLowerCase());
+    const matchFilter = filterAction === 'all' || l.action.includes(filterAction);
+    return matchSearch && matchFilter;
+  });
 
   const columns = [
-    { 
-      title: 'User', 
-      dataIndex: 'user', 
-      key: 'user', 
-      render: (user) => <Tag color="blue">{user}</Tag> 
-    },
-    { 
-      title: 'Action', 
-      dataIndex: 'action', 
-      key: 'action', 
-      render: (action) => <Tag color="purple">{action}</Tag> 
-    },
-    { 
-      title: 'Details', 
-      dataIndex: 'details', 
-      key: 'details', 
-      ellipsis: true 
-    },
-    { 
-      title: 'IP Address', 
-      dataIndex: 'ip', 
-      key: 'ip' 
-    },
-    { 
-      title: 'Module', 
-      dataIndex: 'module', 
-      key: 'module', 
-      render: (module) => <Tag color="cyan">{module}</Tag> 
-    },
-    { 
-      title: 'Status', 
-      dataIndex: 'status', 
-      key: 'status', 
-      render: (status) => <Tag color={status === 'success' ? 'green' : 'red'}>{status.toUpperCase()}</Tag> 
-    },
-    { 
-      title: 'Timestamp', 
-      dataIndex: 'timestamp', 
-      key: 'timestamp', 
-      render: (date) => new Date(date).toLocaleString() 
-    },
-    {
-      title: 'Action',
-      key: 'action',
-      render: (_, record) => (
-        <Button 
-          size="small" 
-          type="primary" 
-          icon={<EyeOutlined />} 
-          onClick={() => { 
-            setSelectedLog(record); 
-            setIsDetailModal(true); 
-          }} 
-        />
-      )
-    }
+    { title: 'Time', dataIndex: 'time', key: 'time', width: 170 },
+    { title: 'User', dataIndex: 'user', key: 'user', render: (u) => <Tag color="blue">{u}</Tag> },
+    { title: 'Action', dataIndex: 'action', key: 'action', render: (a) => <Tag color={getActionColor(a)}>{a}</Tag> },
+    { title: 'Module', dataIndex: 'module', key: 'module', render: (m) => <Tag>{m}</Tag> },
+    { title: 'Details', dataIndex: 'details', key: 'details' },
+    { title: 'IP', dataIndex: 'ip', key: 'ip', render: (i) => <code style={{ fontSize: '11px' }}>{i}</code> },
+    { title: 'Status', dataIndex: 'status', key: 'status', render: (s) => <Tag color={getStatusColor(s)}>{s.toUpperCase()}</Tag> },
   ];
 
-  const stats = {
-    total: logs.length,
-    success: logs.filter(l => l.status === 'success').length,
-    failed: logs.filter(l => l.status === 'failed').length
-  };
-
   return (
-    <div className="p-6 bg-gray-50 min-h-screen">
-      <div className="flex justify-between items-center mb-6">
+    <div style={{ padding: '24px', background: '#f0f2f5', minHeight: '100vh' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '24px' }}>
         <div>
-          <Title level={2} className="flex items-center gap-2">
-            <AuditOutlined className="text-red-500" />
-            Audit Log
-          </Title>
-          <Text className="text-gray-600">Immutable audit trail</Text>
+          <h1 style={{ fontSize: '24px', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
+            <AuditOutlined style={{ color: '#faad14' }} /> Audit Log
+          </h1>
+          <p style={{ color: '#666', margin: '4px 0 0 0' }}>Complete system activity trail</p>
         </div>
         <Space>
-          <Button icon={<ReloadOutlined />} onClick={handleRefresh} loading={loading}>
-            Refresh
-          </Button>
-          <Button icon={<ExportOutlined />} onClick={handleExport}>
-            Export
-          </Button>
+          <Button icon={<ReloadOutlined />}>Refresh</Button>
+          <Button type="primary" icon={<DownloadOutlined />} onClick={() => message.success('Audit log exported!')}>Export</Button>
         </Space>
       </div>
 
-      <Row gutter={[16, 16]} className="mb-6">
-        <Col xs={24} sm={12} lg={8}>
-          <Card className="border-l-4 border-blue-500">
-            <Statistic title="Total Logs" value={stats.total} prefix={<FileTextOutlined />} />
-          </Card>
-        </Col>
-        <Col xs={24} sm={12} lg={8}>
-          <Card className="border-l-4 border-green-500">
-            <Statistic title="Success" value={stats.success} prefix={<CheckCircleOutlined className="text-green-500" />} />
-          </Card>
-        </Col>
-        <Col xs={24} sm={12} lg={8}>
-          <Card className="border-l-4 border-red-500">
-            <Statistic title="Failed" value={stats.failed} prefix={<CloseCircleOutlined className="text-red-500" />} valueStyle={{ color: '#cf1322' }} />
-          </Card>
-        </Col>
-      </Row>
-
-      <Card className="shadow-sm">
-        <Alert 
-          message="Audit Logs are Immutable" 
-          description="Audit logs cannot be modified or deleted. They are stored for compliance and security purposes." 
-          type="info" 
-          showIcon 
-          className="mb-4" 
-        />
-
-        <div className="flex flex-wrap gap-3 mb-4">
-          <Input.Search 
-            placeholder="Search by action, user or details..." 
-            style={{ width: 300 }} 
-            value={searchTerm} 
-            onChange={(e) => handleSearch(e.target.value)} 
-            prefix={<SearchOutlined />} 
-            allowClear 
-            enterButton 
+      <Card>
+        <Space style={{ marginBottom: '16px' }} wrap>
+          <Input.Search
+            placeholder="Search logs..."
+            prefix={<SearchOutlined />}
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            style={{ width: 300 }}
+            allowClear
           />
-          
-          <Select 
-            style={{ width: 160 }} 
-            value={filterType} 
-            onChange={(value) => handleFilterChange(value, filterStatus)} 
-            placeholder="Module" 
-            allowClear
-          >
-            <Option value="all">All Modules</Option>
-            <Option value="User Management">User Management</Option>
-            <Option value="System">System</Option>
-            <Option value="Operations">Operations</Option>
-            <Option value="Backup">Backup</Option>
-            <Option value="Authentication">Authentication</Option>
+          <Select value={filterAction} onChange={setFilterAction} style={{ width: 180 }}>
+            <Option value="all">All Actions</Option>
+            <Option value="LOGIN_SUCCESS">Login Success</Option>
+            <Option value="LOGIN_FAILED">Login Failed</Option>
+            <Option value="CREATED">Created</Option>
+            <Option value="UPDATED">Updated</Option>
+            <Option value="BACKUP">Backup</Option>
           </Select>
-          
-          <Select 
-            style={{ width: 140 }} 
-            value={filterStatus} 
-            onChange={(value) => handleFilterChange(filterType, value)} 
-            placeholder="Status" 
-            allowClear
-          >
-            <Option value="all">All Status</Option>
-            <Option value="success">Success</Option>
-            <Option value="failed">Failed</Option>
-          </Select>
-          
-          <Button icon={<ClearOutlined />} onClick={handleReset}>
-            Reset
-          </Button>
-          
-          <Text type="secondary" className="ml-auto">
-            {filteredLogs.length} / {logs.length} logs shown
-          </Text>
-        </div>
-
-        <Table 
-          dataSource={filteredLogs} 
-          columns={columns} 
-          rowKey="id" 
-          loading={loading} 
-          pagination={{ pageSize: 10 }} 
-        />
+          <RangePicker />
+          <Button icon={<FilterOutlined />}>Apply</Button>
+        </Space>
+        <Table dataSource={filtered} columns={columns} rowKey="id" pagination={{ pageSize: 10 }} />
       </Card>
-
-      {/* Detail Modal */}
-      <Modal 
-        title="Audit Log Details" 
-        open={isDetailModal} 
-        onCancel={() => { 
-          setIsDetailModal(false); 
-          setSelectedLog(null); 
-        }} 
-        footer={null} 
-        width={500}
-      >
-        {selectedLog && (
-          <div>
-            <div className="flex items-center gap-3 mb-4">
-              <Badge status={selectedLog.status === 'success' ? 'success' : 'error'} />
-              <Text strong>{selectedLog.action}</Text>
-              <Tag color="cyan">{selectedLog.module}</Tag>
-            </div>
-            <Descriptions bordered column={1}>
-              <Descriptions.Item label="Log ID">{selectedLog.id}</Descriptions.Item>
-              <Descriptions.Item label="User">{selectedLog.user}</Descriptions.Item>
-              <Descriptions.Item label="Action">{selectedLog.action}</Descriptions.Item>
-              <Descriptions.Item label="Details">{selectedLog.details}</Descriptions.Item>
-              <Descriptions.Item label="IP Address">{selectedLog.ip}</Descriptions.Item>
-              <Descriptions.Item label="Module">{selectedLog.module}</Descriptions.Item>
-              <Descriptions.Item label="Status">
-                <Tag color={selectedLog.status === 'success' ? 'green' : 'red'}>
-                  {selectedLog.status.toUpperCase()}
-                </Tag>
-              </Descriptions.Item>
-              <Descriptions.Item label="Timestamp">
-                {new Date(selectedLog.timestamp).toLocaleString()}
-              </Descriptions.Item>
-            </Descriptions>
-          </div>
-        )}
-      </Modal>
     </div>
   );
 };
 
-export default AdminAuditLog;
+export default AuditLogs;
