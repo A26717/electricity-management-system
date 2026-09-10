@@ -1,13 +1,28 @@
+# ============== Web Framework ==============
 fastapi==0.104.1
 uvicorn[standard]==0.24.0
-sqlalchemy==2.0.23
-psycopg2-binary==2.9.9
+
+# ============== Real-time (Socket.io) ==============
+python-socketio==5.10.0
+
+# ============== Data Validation ==============
 pydantic==2.5.0
 pydantic-settings==2.1.0
+email-validator==2.1.0
+
+# ============== Authentication ==============
 python-jose[cryptography]==3.3.0
 passlib[bcrypt]==1.7.4
 python-multipart==0.0.6
-python-dotenv==1.0.0
-email-validator==2.1.0
 cryptography==41.0.7
+itsdangerous==2.1.2
+
+# ============== Environment ==============
+python-dotenv==1.0.0
+
+# ============== Database (for future) ==============
+sqlalchemy==2.0.23
+psycopg2-binary==2.9.9
+
+# ============== Caching (for future) ==============
 redis==5.0.1
