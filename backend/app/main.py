@@ -97,7 +97,9 @@ if ENVIRONMENT == "production":
         "https://edsa.gov.sl",
         "https://www.edsa.gov.sl",
         "http://localhost:3000",
-        "http://localhost:5173"
+        "http://localhost:5173",
+        "https://*.vercel.app",
+        "https://*.railway.app",
     ]
 else:
     ALLOWED_ORIGINS = ["*"]
@@ -271,7 +273,8 @@ def send_email(to_email, subject, html_content, text_content=None):
 
 def send_verification_email(email, username, verification_token):
     """Send email verification link"""
-    verification_link = f"http://localhost:3000/verify-email?token={verification_token}&email={email}"
+    frontend_url = os.getenv("FRONTEND_URL", "http://localhost:3000")
+    verification_link = f"{frontend_url}/verify-email?token={verification_token}&email={email}"
     
     html_content = f"""
     <!DOCTYPE html>
@@ -317,27 +320,12 @@ def send_verification_email(email, username, verification_token):
     </html>
     """
     
-    text_content = f"""
-    Welcome to EDSA Management System!
-    
-    Hi {username},
-    
-    Thank you for registering with the EDSA Electricity Management System.
-    
-    Please verify your email address by clicking this link:
-    {verification_link}
-    
-    This link will expire in 24 hours.
-    
-    If you did not create an account with us, please ignore this email.
-    
-    © 2024 EDSA Management System. All rights reserved.
-    """
-    
-    return send_email(email, "Verify Your EDSA Account", html_content, text_content)
+    return send_email(email, "Verify Your EDSA Account", html_content)
 
 def send_welcome_email(email, username):
     """Send welcome email after verification"""
+    frontend_url = os.getenv("FRONTEND_URL", "http://localhost:3000")
+    
     html_content = f"""
     <!DOCTYPE html>
     <html>
@@ -363,7 +351,7 @@ def send_welcome_email(email, username):
                 <p>Your email has been successfully verified.</p>
                 <p>You can now login to your account and start using the EDSA Management System.</p>
                 <div style="text-align: center; margin: 20px 0;">
-                    <a href="http://localhost:3000/login" style="display: inline-block; background: #1890ff; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px;">
+                    <a href="{frontend_url}/login" style="display: inline-block; background: #1890ff; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px;">
                         Login to Your Account
                     </a>
                 </div>
@@ -380,25 +368,7 @@ def send_welcome_email(email, username):
     </html>
     """
     
-    text_content = f"""
-    Welcome to EDSA Management System!
-    
-    Email Verified!
-    
-    Your email has been successfully verified.
-    
-    You can now login to your account and start using the EDSA Management System.
-    
-    Login here: http://localhost:3000/login
-    
-    Your account details:
-    - Username: {username}
-    - Email: {email}
-    
-    © 2024 EDSA Management System. All rights reserved.
-    """
-    
-    return send_email(email, "Welcome to EDSA! 🎉", html_content, text_content)
+    return send_email(email, "Welcome to EDSA! 🎉", html_content)
 
 # ============== HELPER FUNCTIONS ==============
 
@@ -464,7 +434,6 @@ def validate_email(email):
     return re.match(pattern, email) is not None
 
 def get_current_user_from_token(token):
-    """Helper function to validate token and return user"""
     for user in USERS:
         if user.get("username") == "admin":
             return user
@@ -543,45 +512,29 @@ def init_security_events():
         now = datetime.now()
         sample_events = [
             {
-                "id": 1,
-                "event_type": "failed_login",
-                "severity": "high",
+                "id": 1, "event_type": "failed_login", "severity": "high",
                 "description": "Multiple failed login attempts from IP 192.168.1.100 (5 attempts in 2 minutes)",
-                "username": "john_doe",
-                "ip_address": "192.168.1.100",
-                "status": "active",
+                "username": "john_doe", "ip_address": "192.168.1.100", "status": "active",
                 "location": "New York, USA",
                 "metadata": {"attempts": 5, "time_window": "2 minutes"},
                 "created_at": (now - timedelta(minutes=5)).isoformat(),
                 "updated_at": (now - timedelta(minutes=5)).isoformat(),
-                "resolved_at": None,
-                "resolved_by": None,
-                "resolution_notes": None
+                "resolved_at": None, "resolved_by": None, "resolution_notes": None
             },
             {
-                "id": 2,
-                "event_type": "suspicious_activity",
-                "severity": "critical",
+                "id": 2, "event_type": "suspicious_activity", "severity": "critical",
                 "description": "Unauthorized access attempt detected on admin panel from IP 10.0.0.50",
-                "username": "admin",
-                "ip_address": "10.0.0.50",
-                "status": "active",
+                "username": "admin", "ip_address": "10.0.0.50", "status": "active",
                 "location": "London, UK",
                 "metadata": {"endpoint": "/admin/dashboard", "method": "POST"},
                 "created_at": (now - timedelta(minutes=15)).isoformat(),
                 "updated_at": (now - timedelta(minutes=15)).isoformat(),
-                "resolved_at": None,
-                "resolved_by": None,
-                "resolution_notes": None
+                "resolved_at": None, "resolved_by": None, "resolution_notes": None
             },
             {
-                "id": 3,
-                "event_type": "password_change",
-                "severity": "medium",
+                "id": 3, "event_type": "password_change", "severity": "medium",
                 "description": "Password changed from new device (unknown location)",
-                "username": "jane_smith",
-                "ip_address": "203.0.113.45",
-                "status": "resolved",
+                "username": "jane_smith", "ip_address": "203.0.113.45", "status": "resolved",
                 "location": "Unknown",
                 "metadata": {"device_type": "Mobile", "browser": "Chrome"},
                 "created_at": (now - timedelta(hours=2)).isoformat(),
@@ -591,56 +544,34 @@ def init_security_events():
                 "resolution_notes": "User confirmed it was legitimate via email verification"
             },
             {
-                "id": 4,
-                "event_type": "login",
-                "severity": "low",
+                "id": 4, "event_type": "login", "severity": "low",
                 "description": "Successful login from new location (Tokyo, Japan)",
-                "username": "bob_wilson",
-                "ip_address": "198.51.100.75",
-                "status": "active",
+                "username": "bob_wilson", "ip_address": "198.51.100.75", "status": "active",
                 "location": "Tokyo, Japan",
                 "metadata": {"login_time": "00:45:32", "session_duration": "15m"},
                 "created_at": (now - timedelta(minutes=45)).isoformat(),
                 "updated_at": (now - timedelta(minutes=45)).isoformat(),
-                "resolved_at": None,
-                "resolved_by": None,
-                "resolution_notes": None
+                "resolved_at": None, "resolved_by": None, "resolution_notes": None
             },
             {
-                "id": 5,
-                "event_type": "permission_change",
-                "severity": "high",
+                "id": 5, "event_type": "permission_change", "severity": "high",
                 "description": "User role changed from 'viewer' to 'admin' by another admin",
-                "username": "alice_wong",
-                "ip_address": "192.168.1.200",
-                "status": "active",
+                "username": "alice_wong", "ip_address": "192.168.1.200", "status": "active",
                 "location": "San Francisco, USA",
-                "metadata": {
-                    "old_role": "viewer",
-                    "new_role": "admin",
-                    "changed_by": "admin_user"
-                },
+                "metadata": {"old_role": "viewer", "new_role": "admin", "changed_by": "admin_user"},
                 "created_at": (now - timedelta(hours=1)).isoformat(),
                 "updated_at": (now - timedelta(hours=1)).isoformat(),
-                "resolved_at": None,
-                "resolved_by": None,
-                "resolution_notes": None
+                "resolved_at": None, "resolved_by": None, "resolution_notes": None
             },
             {
-                "id": 6,
-                "event_type": "failed_login",
-                "severity": "critical",
+                "id": 6, "event_type": "failed_login", "severity": "critical",
                 "description": "Brute force attack detected on admin account",
-                "username": "admin",
-                "ip_address": "45.33.22.11",
-                "status": "active",
+                "username": "admin", "ip_address": "45.33.22.11", "status": "active",
                 "location": "Moscow, Russia",
                 "metadata": {"attempts": 50, "time_window": "5 minutes"},
                 "created_at": (now - timedelta(minutes=10)).isoformat(),
                 "updated_at": (now - timedelta(minutes=10)).isoformat(),
-                "resolved_at": None,
-                "resolved_by": None,
-                "resolution_notes": None
+                "resolved_at": None, "resolved_by": None, "resolution_notes": None
             }
         ]
         
@@ -664,30 +595,22 @@ async def register(request: dict, background_tasks: BackgroundTasks):
     phone = request.get("phone", "")
     address = request.get("address", "")
     
-    print(f"📝 Registration attempt: username='{username}', email='{email}', role='{role}'")
-    
-    # Validate required fields
     if not username or not email or not password or not name:
         raise HTTPException(status_code=400, detail="Username, email, password, and name are required")
     
-    # Validate email
     if not validate_email(email):
         raise HTTPException(status_code=400, detail="Invalid email format")
     
-    # Validate password
     valid, msg = validate_password(password)
     if not valid:
         raise HTTPException(status_code=400, detail=msg)
     
-    # Check if username already exists
     if find_user_by_username(username):
         raise HTTPException(status_code=409, detail="Username already taken")
     
-    # Check if email already exists
     if find_user_by_email(email):
         raise HTTPException(status_code=409, detail="Email already registered")
     
-    # For client role, create a client record
     client_id = None
     if role == "client":
         client_id = generate_client_id()
@@ -695,61 +618,39 @@ async def register(request: dict, background_tasks: BackgroundTasks):
             "id": client_id,
             "client_code": generate_client_code(),
             "account_number": generate_account_number(),
-            "name": name,
-            "email": email,
-            "phone": phone,
-            "address": address,
+            "name": name, "email": email, "phone": phone, "address": address,
             "status": "pending_verification",
-            "total_debt": 0,
-            "credit_balance": 0
+            "total_debt": 0, "credit_balance": 0
         }
         CLIENTS.append(new_client)
     
-    # Create new user
     new_user = {
-        "id": generate_user_id(),
-        "username": username,
-        "email": email,
-        "name": name,
-        "role": role,
-        "password": password,
-        "client_id": client_id,
-        "status": "pending_verification",
-        "email_verified": False,
+        "id": generate_user_id(), "username": username, "email": email, "name": name,
+        "role": role, "password": password, "client_id": client_id,
+        "status": "pending_verification", "email_verified": False,
         "created_at": datetime.utcnow().isoformat()
     }
     USERS.append(new_user)
     
-    # Generate verification token
     verification_token = generate_verification_token(email)
-    
-    # Store token with expiry
     VERIFICATION_TOKENS[email] = {
         "token": verification_token,
         "expires_at": datetime.utcnow() + timedelta(hours=VERIFICATION_TOKEN_EXPIRE_HOURS),
         "user_id": new_user["id"]
     }
     
-    # Send verification email
     background_tasks.add_task(send_verification_email, email, username, verification_token)
     
-    print(f"✅ User registered: {username} with ID: {new_user['id']}")
-    print(f"📧 Verification email sent to: {email}")
-    
-    # Log registration
     AUDIT_LOGS.append({
         "id": f"AUD{len(AUDIT_LOGS) + 1:03d}",
-        "user_id": new_user["id"],
-        "action": "REGISTER",
+        "user_id": new_user["id"], "action": "REGISTER",
         "details": f"New user {username} registered as {role} - Email verification sent",
         "status": "pending_verification",
         "timestamp": datetime.utcnow().isoformat()
     })
     
-    # Emit socket notification
     await sio.emit('notification', {
-        'type': 'info',
-        'title': 'New User Registered',
+        'type': 'info', 'title': 'New User Registered',
         'message': f'{name} registered as {role}',
         'timestamp': datetime.utcnow().isoformat()
     })
@@ -758,12 +659,9 @@ async def register(request: dict, background_tasks: BackgroundTasks):
         "success": True,
         "message": "Registration successful. Please check your email for verification link.",
         "user": {
-            "id": new_user["id"],
-            "username": new_user["username"],
-            "name": new_user["name"],
-            "email": new_user["email"],
-            "role": new_user["role"],
-            "status": new_user["status"],
+            "id": new_user["id"], "username": new_user["username"],
+            "name": new_user["name"], "email": new_user["email"],
+            "role": new_user["role"], "status": new_user["status"],
             "client_id": new_user["client_id"]
         },
         "requires_verification": True,
@@ -779,40 +677,32 @@ async def verify_email(request: dict):
     if not token or not email:
         raise HTTPException(status_code=400, detail="Token and email are required")
     
-    # Verify the token
     verified_email = verify_token(token, VERIFICATION_TOKEN_EXPIRE_HOURS)
     
     if not verified_email or verified_email != email:
         raise HTTPException(status_code=400, detail="Invalid or expired verification token")
     
-    # Find user by email
     user = find_user_by_email(email)
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     
-    # Update user status
     user["status"] = "active"
     user["email_verified"] = True
     
-    # Update client status if client
     if user.get("client_id"):
         for c in CLIENTS:
             if c.get("id") == user["client_id"]:
                 c["status"] = "active"
                 break
     
-    # Remove from verification tokens
     if email in VERIFICATION_TOKENS:
         del VERIFICATION_TOKENS[email]
     
-    # Send welcome email
     send_welcome_email(email, user.get("username"))
     
-    # Log verification
     AUDIT_LOGS.append({
         "id": f"AUD{len(AUDIT_LOGS) + 1:03d}",
-        "user_id": user["id"],
-        "action": "EMAIL_VERIFIED",
+        "user_id": user["id"], "action": "EMAIL_VERIFIED",
         "details": f"Email {email} verified for user {user.get('username')}",
         "status": "success",
         "timestamp": datetime.utcnow().isoformat()
@@ -822,12 +712,9 @@ async def verify_email(request: dict):
         "success": True,
         "message": "Email verified successfully. You can now login.",
         "user": {
-            "id": user["id"],
-            "username": user["username"],
-            "name": user["name"],
-            "email": user["email"],
-            "role": user["role"],
-            "status": user["status"]
+            "id": user["id"], "username": user["username"],
+            "name": user["name"], "email": user["email"],
+            "role": user["role"], "status": user["status"]
         }
     }
 
@@ -839,7 +726,6 @@ async def resend_verification(request: dict, background_tasks: BackgroundTasks):
     if not email:
         raise HTTPException(status_code=400, detail="Email is required")
     
-    # Find user by email
     user = find_user_by_email(email)
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
@@ -847,23 +733,16 @@ async def resend_verification(request: dict, background_tasks: BackgroundTasks):
     if user.get("email_verified"):
         raise HTTPException(status_code=400, detail="Email already verified")
     
-    # Generate new verification token
     verification_token = generate_verification_token(email)
-    
-    # Store token with expiry
     VERIFICATION_TOKENS[email] = {
         "token": verification_token,
         "expires_at": datetime.utcnow() + timedelta(hours=VERIFICATION_TOKEN_EXPIRE_HOURS),
         "user_id": user["id"]
     }
     
-    # Send verification email
     background_tasks.add_task(send_verification_email, email, user.get("username"), verification_token)
     
-    return {
-        "success": True,
-        "message": "Verification email resent. Please check your email."
-    }
+    return {"success": True, "message": "Verification email resent. Please check your email."}
 
 @app.post("/api/v1/auth/login")
 async def login(request: dict):
@@ -875,7 +754,6 @@ async def login(request: dict):
     if not username or not password:
         raise HTTPException(status_code=400, detail="Username and password required")
     
-    # Find user by username or email
     found_user = None
     for u in USERS:
         if u.get("username").lower() == username.lower() or u.get("email").lower() == username.lower():
@@ -888,60 +766,46 @@ async def login(request: dict):
     
     print(f"📝 Found user: {found_user.get('username')}, role: {found_user.get('role')}, status: {found_user.get('status')}")
     
-    # Check if email is verified
     if not found_user.get("email_verified"):
         raise HTTPException(status_code=403, detail="Email not verified. Please check your email for verification link.")
     
-    # Check password
     if password != found_user.get("password"):
         print(f"❌ Password mismatch for: {username}")
         raise HTTPException(status_code=401, detail="Invalid credentials. Please check your password.")
     
-    # Check if user is active
     if found_user.get("status") == "inactive":
         raise HTTPException(status_code=403, detail="Account has been deactivated. Please contact support.")
     
-    # Generate token
     token = f"token_{uuid.uuid4().hex[:32]}"
-    
     user_role = found_user.get("role")
     print(f"✅ Login successful: {username} -> role: {user_role}")
     
-    # Log audit
     AUDIT_LOGS.append({
         "id": f"AUD{len(AUDIT_LOGS) + 1:03d}",
-        "user_id": found_user["id"],
-        "action": "LOGIN_SUCCESS",
+        "user_id": found_user["id"], "action": "LOGIN_SUCCESS",
         "details": f"User {username} logged in as {user_role}",
         "status": "success",
         "timestamp": datetime.utcnow().isoformat()
     })
     
-    # Emit socket notification for login
     await sio.emit('notification', {
-        'type': 'success',
-        'title': 'User Login',
+        'type': 'success', 'title': 'User Login',
         'message': f'{found_user.get("name")} logged in',
         'timestamp': datetime.utcnow().isoformat()
     })
     
     return {
-        "access_token": token,
-        "token_type": "bearer",
+        "access_token": token, "token_type": "bearer",
         "user": {
-            "id": found_user["id"],
-            "username": found_user["username"],
-            "name": found_user["name"],
-            "email": found_user["email"],
-            "role": user_role,
-            "client_id": found_user.get("client_id"),
+            "id": found_user["id"], "username": found_user["username"],
+            "name": found_user["name"], "email": found_user["email"],
+            "role": user_role, "client_id": found_user.get("client_id"),
             "status": found_user.get("status")
         },
         "menu": get_role_menu(user_role),
         "permissions": ["view_dashboard", "view_profile"],
         "currency": {
-            "code": CURRENCY_CODE,
-            "symbol": CURRENCY_SYMBOL,
+            "code": CURRENCY_CODE, "symbol": CURRENCY_SYMBOL,
             "exchange_rate": EXCHANGE_RATE
         }
     }
@@ -954,13 +818,9 @@ async def logout():
 async def get_current_user():
     return {
         "user": {
-            "id": "USR001",
-            "username": "admin",
-            "name": "System Admin",
-            "email": "admin@edsa.gov.sl",
-            "role": "administrator",
-            "client_id": None,
-            "status": "active"
+            "id": "USR001", "username": "admin", "name": "System Admin",
+            "email": "admin@edsa.gov.sl", "role": "administrator",
+            "client_id": None, "status": "active"
         },
         "menu": get_role_menu("administrator"),
         "permissions": ["view_dashboard", "view_profile", "manage_users"]
@@ -970,18 +830,11 @@ async def get_current_user():
 
 @app.get("/api/v1/security/events")
 async def get_security_events(
-    skip: int = 0,
-    limit: int = 20,
-    severity: str = None,
-    status: str = None,
-    event_type: str = None,
-    search: str = None,
-    start_date: str = None,
-    end_date: str = None
+    skip: int = 0, limit: int = 20, severity: str = None,
+    status: str = None, event_type: str = None,
+    search: str = None, start_date: str = None, end_date: str = None
 ):
-    """Get security events with filtering"""
     global SECURITY_EVENTS
-    
     filtered = SECURITY_EVENTS.copy()
     
     if severity:
@@ -998,22 +851,14 @@ async def get_security_events(
                    search_lower in e.get("ip_address", "").lower()]
     
     filtered.sort(key=lambda x: x.get("created_at", ""), reverse=True)
-    
     total = len(filtered)
     events = filtered[skip:skip + limit]
     
-    return {
-        "items": events,
-        "total": total,
-        "skip": skip,
-        "limit": limit
-    }
+    return {"items": events, "total": total, "skip": skip, "limit": limit}
 
 @app.get("/api/v1/security/stats")
 async def get_security_stats():
-    """Get security event statistics"""
     global SECURITY_EVENTS
-    
     total = len(SECURITY_EVENTS)
     unresolved = len([e for e in SECURITY_EVENTS if e.get("status") == "active"])
     
@@ -1041,16 +886,12 @@ async def get_security_stats():
     }
     
     return {
-        "total": total,
-        "unresolved": unresolved,
-        "last_24h": last_24h,
-        "by_severity": by_severity,
-        "by_status": by_status
+        "total": total, "unresolved": unresolved, "last_24h": last_24h,
+        "by_severity": by_severity, "by_status": by_status
     }
 
 @app.post("/api/v1/security/events/simulate")
 async def simulate_security_event(request: dict):
-    """Simulate a security event for testing"""
     global SECURITY_EVENTS, SECURITY_EVENT_ID
     
     event_type = request.get("event_type", "suspicious_activity")
@@ -1065,32 +906,23 @@ async def simulate_security_event(request: dict):
         )
     
     event = {
-        "id": SECURITY_EVENT_ID,
-        "event_type": event_type,
-        "severity": severity,
-        "description": description,
+        "id": SECURITY_EVENT_ID, "event_type": event_type,
+        "severity": severity, "description": description,
         "username": "system_test",
         "ip_address": f"192.168.1.{random.randint(1, 255)}",
         "status": "active",
         "location": f"Location {random.randint(1, 10)}",
-        "metadata": {
-            "simulated": True,
-            "timestamp": datetime.now().isoformat()
-        },
+        "metadata": {"simulated": True, "timestamp": datetime.now().isoformat()},
         "created_at": datetime.now().isoformat(),
         "updated_at": datetime.now().isoformat(),
-        "resolved_at": None,
-        "resolved_by": None,
-        "resolution_notes": None
+        "resolved_at": None, "resolved_by": None, "resolution_notes": None
     }
     
     SECURITY_EVENTS.append(event)
     SECURITY_EVENT_ID += 1
     
-    # Emit socket notification for new security event
     await sio.emit('notification', {
-        'type': 'security',
-        'title': f'{severity.upper()} Security Event',
+        'type': 'security', 'title': f'{severity.upper()} Security Event',
         'message': description,
         'timestamp': datetime.utcnow().isoformat(),
         'data': event
@@ -1100,9 +932,7 @@ async def simulate_security_event(request: dict):
 
 @app.put("/api/v1/security/events/{event_id}/resolve")
 async def resolve_security_event(event_id: int, request: dict):
-    """Resolve a security event"""
     global SECURITY_EVENTS
-    
     resolution_notes = request.get("resolution_notes")
     status = request.get("status", "resolved")
     
@@ -1122,22 +952,17 @@ async def resolve_security_event(event_id: int, request: dict):
 
 @app.get("/api/v1/security/rules")
 async def get_security_rules(is_active: bool = None):
-    """Get security rules"""
     rules = SECURITY_RULES.copy()
-    
     if is_active is not None:
         rules = [r for r in rules if r.get("is_active") == is_active]
-    
     return rules
 
 @app.put("/api/v1/security/rules/{rule_id}/toggle")
 async def toggle_security_rule(rule_id: int):
-    """Toggle security rule active status"""
     for rule in SECURITY_RULES:
         if rule.get("id") == rule_id:
             rule["is_active"] = not rule.get("is_active", True)
             return rule
-    
     raise HTTPException(status_code=404, detail="Rule not found")
 
 # ============== DASHBOARD STATS ==============
@@ -1155,9 +980,7 @@ async def get_stats():
         "monthlyRevenueUSD": convert_to_usd(total_revenue_sll),
         "activeAlerts": len([a for a in ALERTS if not a.get("resolved")]),
         "criticalAlerts": len([a for a in ALERTS if a.get("severity") == "critical"]),
-        "meterUtilization": 95,
-        "collectionRate": 87.5,
-        "stolenMeters": 3,
+        "meterUtilization": 95, "collectionRate": 87.5, "stolenMeters": 3,
         "totalUsers": len(USERS),
         "activeUsers": len([u for u in USERS if u.get("status") == "active"]),
         "pendingVerifications": len([u for u in USERS if u.get("status") == "pending_verification"]),
@@ -1166,8 +989,7 @@ async def get_stats():
         "pendingApprovals": len([e for e in EXCEPTION_REQUESTS if e.get("status") == "pending_approval"]),
         "activeComplaints": len([c for c in COMPLAINTS if c.get("status") in ["pending", "in_progress"]]),
         "resolvedCases": len([c for c in COMPLAINTS if c.get("status") == "resolved"]),
-        "workOrders": len(WORK_ORDERS),
-        "fieldTeams": 4,
+        "workOrders": len(WORK_ORDERS), "fieldTeams": 4,
         "creditBalance": 32.4,
         "totalTokens": len(TOKENS),
         "activeTokens": len([t for t in TOKENS if t.get("status") == "active"]),
@@ -1176,8 +998,7 @@ async def get_stats():
         "totalBills": len(BILLS),
         "pendingBills": len([b for b in BILLS if b.get("payment_status") in ["pending", "overdue"]]),
         "currency": {
-            "code": CURRENCY_CODE,
-            "symbol": CURRENCY_SYMBOL,
+            "code": CURRENCY_CODE, "symbol": CURRENCY_SYMBOL,
             "exchange_rate": EXCHANGE_RATE
         }
     }
@@ -1248,17 +1069,12 @@ async def buy_credit(request: dict):
     
     amount_sll = convert_to_sll(amount_usd)
     units = amount_usd / 15.50
-    
     token_code = f"EDSA-{uuid.uuid4().hex[:4].upper()}-{uuid.uuid4().hex[:4].upper()}-{uuid.uuid4().hex[:4].upper()}-{uuid.uuid4().hex[:4].upper()}"
     
     token = {
-        "id": f"TOK{len(TOKENS) + 1:03d}",
-        "token_code": token_code,
-        "client_id": client_id,
-        "amount": amount_usd,
-        "amount_sll": amount_sll,
-        "units": units,
-        "status": "active",
+        "id": f"TOK{len(TOKENS) + 1:03d}", "token_code": token_code,
+        "client_id": client_id, "amount": amount_usd, "amount_sll": amount_sll,
+        "units": units, "status": "active",
         "generation_date": datetime.utcnow().isoformat(),
         "expiry_date": (datetime.utcnow() + timedelta(days=30)).isoformat()
     }
@@ -1267,37 +1083,24 @@ async def buy_credit(request: dict):
     payment = {
         "id": f"PAY{len(PAYMENTS) + 1:03d}",
         "payment_reference": f"PAY-{datetime.utcnow().strftime('%Y%m%d%H%M%S')}",
-        "client_id": client_id,
-        "client_name": "Client",
-        "amount": amount_usd,
-        "amount_sll": amount_sll,
+        "client_id": client_id, "client_name": "Client",
+        "amount": amount_usd, "amount_sll": amount_sll,
         "payment_date": datetime.utcnow().isoformat(),
-        "payment_method": payment_method,
-        "provider": provider,
-        "status": "completed",
-        "token_code": token_code,
-        "currency": CURRENCY_CODE
+        "payment_method": payment_method, "provider": provider,
+        "status": "completed", "token_code": token_code, "currency": CURRENCY_CODE
     }
     PAYMENTS.append(payment)
     
-    # Emit socket notification for credit purchase
     await sio.emit('notification', {
-        'type': 'success',
-        'title': 'Credit Purchase',
+        'type': 'success', 'title': 'Credit Purchase',
         'message': f'Credit purchase of ${amount_usd} completed',
         'timestamp': datetime.utcnow().isoformat(),
         'data': {'token': token, 'payment': payment}
     })
     
     return {
-        "success": True,
-        "token": token,
-        "payment": payment,
-        "currency": {
-            "code": CURRENCY_CODE,
-            "symbol": CURRENCY_SYMBOL,
-            "exchange_rate": EXCHANGE_RATE
-        },
+        "success": True, "token": token, "payment": payment,
+        "currency": {"code": CURRENCY_CODE, "symbol": CURRENCY_SYMBOL, "exchange_rate": EXCHANGE_RATE},
         "message": f"Credit purchased successfully in {CURRENCY_CODE}"
     }
 
@@ -1315,18 +1118,15 @@ async def submit_complaint(request: dict):
     }
     COMPLAINTS.append(complaint)
     
-    # Emit socket notification for new complaint
     await sio.emit('notification', {
-        'type': 'warning',
-        'title': 'New Complaint',
+        'type': 'warning', 'title': 'New Complaint',
         'message': f'New complaint: {complaint["type"]}',
         'timestamp': datetime.utcnow().isoformat(),
         'data': complaint
     })
     
     return {
-        "success": True,
-        "complaint": complaint,
+        "success": True, "complaint": complaint,
         "reference": complaint["id"],
         "message": "Complaint submitted successfully"
     }
@@ -1346,15 +1146,10 @@ async def get_staff_work_orders():
 @app.get("/api/v1/it/system-health")
 async def get_system_health():
     return {
-        "status": "healthy",
-        "uptime": "99.98%",
-        "response_time": "142ms",
-        "error_rate": "0.02%",
-        "database": "connected",
-        "redis": "connected",
-        "mqtt": "connected",
-        "environment": ENVIRONMENT,
-        "currency": CURRENCY_CODE
+        "status": "healthy", "uptime": "99.98%",
+        "response_time": "142ms", "error_rate": "0.02%",
+        "database": "connected", "redis": "connected", "mqtt": "connected",
+        "environment": ENVIRONMENT, "currency": CURRENCY_CODE
     }
 
 @app.get("/api/v1/it/backups")
@@ -1372,11 +1167,9 @@ async def get_revenue():
         "totalRevenueUSD": convert_to_usd(total_revenue_sll),
         "monthlyRevenue": total_revenue_sll,
         "monthlyRevenueUSD": convert_to_usd(total_revenue_sll),
-        "collectionRate": 87.5,
-        "outstanding": 12500,
+        "collectionRate": 87.5, "outstanding": 12500,
         "outstandingSLL": convert_to_sll(12500),
-        "currency": CURRENCY_CODE,
-        "currencySymbol": CURRENCY_SYMBOL,
+        "currency": CURRENCY_CODE, "currencySymbol": CURRENCY_SYMBOL,
         "revenueData": [
             {"month": "Jan", "amount": 85000, "amount_sll": convert_to_sll(85000)},
             {"month": "Feb", "amount": 92000, "amount_sll": convert_to_sll(92000)},
@@ -1390,11 +1183,9 @@ async def get_revenue():
 @app.get("/api/v1/executive/losses")
 async def get_losses():
     return {
-        "totalLoss": 8.2,
-        "lossCost": 45000,
+        "totalLoss": 8.2, "lossCost": 45000,
         "lossCostSLL": convert_to_sll(45000),
-        "improvement": 1.3,
-        "highLossAreas": 3,
+        "improvement": 1.3, "highLossAreas": 3,
         "currency": CURRENCY_CODE,
         "lossData": [
             {"district": "Western", "loss": 8.2, "cost": 45000, "cost_sll": convert_to_sll(45000), "status": "critical"},
@@ -1407,12 +1198,9 @@ async def get_losses():
 @app.get("/api/v1/executive/fraud-overview")
 async def get_fraud_overview():
     return {
-        "totalCases": 28,
-        "openCases": 8,
-        "recovered": 45000,
-        "recoveredSLL": convert_to_sll(45000),
-        "detectionRate": 78,
-        "currency": CURRENCY_CODE,
+        "totalCases": 28, "openCases": 8,
+        "recovered": 45000, "recoveredSLL": convert_to_sll(45000),
+        "detectionRate": 78, "currency": CURRENCY_CODE,
         "fraudData": [
             {"id": "FRD001", "type": "Meter Tampering", "status": "open", "amount": 4500, "amount_sll": convert_to_sll(4500)},
             {"id": "FRD002", "type": "Electricity Theft", "status": "investigating", "amount": 12500, "amount_sll": convert_to_sll(12500)},
@@ -1423,96 +1211,43 @@ async def get_fraud_overview():
 # ============== OPERATIONS MANAGER ENDPOINTS ==============
 
 @app.get("/api/v1/operations/approvals")
-async def get_approvals():
-    return EXCEPTION_REQUESTS
-
-@app.get("/api/v1/operations/approvals")
 async def get_operations_approvals():
-    """Get all operations approvals"""
     return [
-        {
-            "id": "APR001",
-            "type": "Debt Waiver",
-            "requestor": "Jane Staff",
-            "client": "CLT002",
-            "amount": 12500,
-            "status": "pending",
-            "submitted": "2026-09-10T10:00:00",
-            "description": "Customer requesting debt waiver due to financial hardship",
-            "priority": "high"
-        },
-        {
-            "id": "APR002",
-            "type": "Bill Adjustment",
-            "requestor": "John Staff",
-            "client": "CLT001",
-            "amount": 100,
-            "status": "pending",
-            "submitted": "2026-09-10T09:30:00",
-            "description": "Incorrect billing adjustment request",
-            "priority": "medium"
-        },
-        {
-            "id": "APR003",
-            "type": "Payment Plan",
-            "requestor": "Mary Staff",
-            "client": "CLT003",
-            "amount": 8500,
-            "status": "approved",
-            "submitted": "2026-09-09T14:00:00",
-            "description": "Payment plan for outstanding debt",
-            "priority": "high"
-        },
-        {
-            "id": "APR004",
-            "type": "Meter Replacement",
-            "requestor": "Tom Staff",
-            "client": "CLT004",
-            "amount": 2500,
-            "status": "pending",
-            "submitted": "2026-09-10T08:00:00",
-            "description": "Meter replacement request due to damage",
-            "priority": "medium"
-        }
+        {"id": "APR001", "type": "Debt Waiver", "requestor": "Jane Staff", "client": "CLT002",
+         "amount": 12500, "status": "pending", "submitted": "2026-09-10T10:00:00",
+         "description": "Customer requesting debt waiver due to financial hardship", "priority": "high"},
+        {"id": "APR002", "type": "Bill Adjustment", "requestor": "John Staff", "client": "CLT001",
+         "amount": 100, "status": "pending", "submitted": "2026-09-10T09:30:00",
+         "description": "Incorrect billing adjustment request", "priority": "medium"},
+        {"id": "APR003", "type": "Payment Plan", "requestor": "Mary Staff", "client": "CLT003",
+         "amount": 8500, "status": "approved", "submitted": "2026-09-09T14:00:00",
+         "description": "Payment plan for outstanding debt", "priority": "high"},
+        {"id": "APR004", "type": "Meter Replacement", "requestor": "Tom Staff", "client": "CLT004",
+         "amount": 2500, "status": "pending", "submitted": "2026-09-10T08:00:00",
+         "description": "Meter replacement request due to damage", "priority": "medium"}
     ]
 
 @app.post("/api/v1/operations/approvals/{approval_id}/approve")
 async def approve_request(approval_id: str):
-    """Approve a request"""
-    # Emit socket notification
     await sio.emit('notification', {
-        'type': 'success',
-        'title': 'Request Approved',
+        'type': 'success', 'title': 'Request Approved',
         'message': f'Request {approval_id} has been approved',
         'timestamp': datetime.utcnow().isoformat(),
         'data': {'approval_id': approval_id, 'status': 'approved'}
     })
-    
-    return {
-        "success": True,
-        "message": f"Request {approval_id} approved",
-        "approval_id": approval_id,
-        "status": "approved"
-    }
+    return {"success": True, "message": f"Request {approval_id} approved",
+            "approval_id": approval_id, "status": "approved"}
 
 @app.post("/api/v1/operations/approvals/{approval_id}/reject")
 async def reject_request(approval_id: str):
-    """Reject a request"""
-    # Emit socket notification
     await sio.emit('notification', {
-        'type': 'warning',
-        'title': 'Request Rejected',
+        'type': 'warning', 'title': 'Request Rejected',
         'message': f'Request {approval_id} has been rejected',
         'timestamp': datetime.utcnow().isoformat(),
         'data': {'approval_id': approval_id, 'status': 'rejected'}
     })
-    
-    return {
-        "success": True,
-        "message": f"Request {approval_id} rejected",
-        "approval_id": approval_id,
-        "status": "rejected"
-    }
+    return {"success": True, "message": f"Request {approval_id} rejected",
+            "approval_id": approval_id, "status": "rejected"}
 
 # ============== ADMIN ENDPOINTS ==============
 
@@ -1529,26 +1264,19 @@ async def create_backup():
     backup = {
         "id": f"BAK{len(BACKUPS) + 1:03d}",
         "name": f"Manual Backup {datetime.utcnow().strftime('%Y-%m-%d %H:%M')}",
-        "size": "2.6 GB",
-        "date": datetime.utcnow().isoformat(),
+        "size": "2.6 GB", "date": datetime.utcnow().isoformat(),
         "status": "completed"
     }
     BACKUPS.append(backup)
     
-    # Emit socket notification
     await sio.emit('notification', {
-        'type': 'info',
-        'title': 'Backup Created',
+        'type': 'info', 'title': 'Backup Created',
         'message': f'Backup {backup["name"]} completed',
         'timestamp': datetime.utcnow().isoformat(),
         'data': backup
     })
     
-    return {
-        "success": True,
-        "backup": backup,
-        "message": "Backup created successfully"
-    }
+    return {"success": True, "backup": backup, "message": "Backup created successfully"}
 
 # ============== HEALTH AND ROOT ==============
 
@@ -1559,48 +1287,27 @@ async def health_check():
         "timestamp": datetime.utcnow().isoformat(),
         "environment": ENVIRONMENT,
         "currency": CURRENCY_CODE,
-        "services": {
-            "api": "running",
-            "database": "connected",
-            "socketio": "running"
-        }
+        "services": {"api": "running", "database": "connected", "socketio": "running"}
     }
 
 @app.get("/")
 async def root():
     return {
-        "name": "EDSA Management System",
-        "version": "2.0.0",
-        "status": "running",
-        "environment": ENVIRONMENT,
-        "currency": {
-            "code": CURRENCY_CODE,
-            "symbol": CURRENCY_SYMBOL,
-            "exchange_rate": EXCHANGE_RATE
-        },
+        "name": "EDSA Management System", "version": "2.0.0",
+        "status": "running", "environment": ENVIRONMENT,
+        "currency": {"code": CURRENCY_CODE, "symbol": CURRENCY_SYMBOL, "exchange_rate": EXCHANGE_RATE},
         "timestamp": datetime.utcnow().isoformat(),
         "endpoints": {
-            "docs": "/docs",
-            "health": "/health",
-            "socketio": "/socket.io",
-            "auth": "/api/v1/auth/login",
-            "register": "/api/v1/auth/register",
+            "docs": "/docs", "health": "/health", "socketio": "/socket.io",
+            "auth": "/api/v1/auth/login", "register": "/api/v1/auth/register",
             "verify-email": "/api/v1/auth/verify-email",
             "resend-verification": "/api/v1/auth/resend-verification",
-            "dashboard": "/api/v1/dashboard/stats",
-            "security": {
-                "events": "/api/v1/security/events",
-                "stats": "/api/v1/security/stats",
-                "simulate": "/api/v1/security/events/simulate",
-                "resolve": "/api/v1/security/events/{event_id}/resolve",
-                "rules": "/api/v1/security/rules"
-            }
+            "dashboard": "/api/v1/dashboard/stats"
         }
     }
 
 # ============== SOCKET.IO ASGI APP ==============
 
-# Create the combined ASGI app with Socket.io support
 socket_app = socketio.ASGIApp(
     sio,
     other_asgi_app=app,
@@ -1610,11 +1317,14 @@ socket_app = socketio.ASGIApp(
 # ============== MAIN ENTRY POINT ==============
 
 if __name__ == "__main__":
-    port = int(os.getenv("BACKEND_PORT", 8000))
+    # Railway provides PORT, we use it; otherwise fallback to 8000
+    port = int(os.getenv("PORT", os.getenv("BACKEND_PORT", 8000)))
     host = os.getenv("BACKEND_HOST", "0.0.0.0")
     
+    print(f"🚀 Starting server on {host}:{port}")
+    
     uvicorn.run(
-        "app.main:socket_app",  # Use socket_app for Socket.io support
+        "app.main:socket_app",
         host=host,
         port=port,
         reload=DEBUG,
